@@ -1,9 +1,14 @@
 import React from 'react';
-import { Eye, EyeOff, Search, ChevronRight, Box, MapPin } from 'lucide-react';
+import { Eye, EyeOff, Search, ChevronRight, Box, MapPin, Target } from 'lucide-react';
 import { useEditorStore, editorStore } from '../state/editorStore';
 import type { AnalyzedNode, ObjectCategory } from '../state/types';
 
-export const ObjectHierarchy: React.FC = () => {
+interface ObjectHierarchyProps {
+  onFocusNode?: (nodeId: string) => void;
+  onSpawnAtNode?: (nodeId: string) => void;
+}
+
+export const ObjectHierarchy: React.FC<ObjectHierarchyProps> = ({ onFocusNode, onSpawnAtNode }) => {
   const { nodes, selectedNodeId, searchQuery, categoryFilter, spawnPoint } = useEditorStore();
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -33,22 +38,34 @@ export const ObjectHierarchy: React.FC = () => {
     editorStore.selectNode(node.id);
   };
 
+  const handleFocusNode = (e: React.MouseEvent, node: AnalyzedNode) => {
+    e.stopPropagation();
+    editorStore.selectNode(node.id);
+    if (onFocusNode) {
+      onFocusNode(node.id);
+    }
+  };
+
   const handleSpawnOnNode = (e: React.MouseEvent, node: AnalyzedNode) => {
     e.stopPropagation();
     editorStore.selectNode(node.id);
-    // Position player safely on top of the chosen object
-    const [cx, , cz] = node.center;
-    const topY = parseFloat((node.worldBoundingBox.max[1] + 1.0).toFixed(2));
+    if (onSpawnAtNode) {
+      onSpawnAtNode(node.id);
+    } else {
+      // Fallback if full 3D engine is not attached
+      const [cx, , cz] = node.center;
+      const topY = parseFloat((node.worldBoundingBox.max[1] + 1.0).toFixed(2));
 
-    editorStore.setState({
-      spawnPoint: {
-        position: [cx, topY, cz],
-        rotationY: 0,
-        eyeHeight: 1.65,
-        isValidated: true,
-        groundHeightFound: topY,
-      },
-    });
+      editorStore.setState({
+        spawnPoint: {
+          position: [cx, topY, cz],
+          rotationY: 0,
+          eyeHeight: 1.65,
+          isValidated: true,
+          groundHeightFound: topY,
+        },
+      });
+    }
   };
 
   const handleShowAll = () => {
@@ -62,17 +79,17 @@ export const ObjectHierarchy: React.FC = () => {
   const selectedNode = selectedNodeId ? nodes.get(selectedNodeId) : null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', height: '100%' }}>
+    <div className="scene-explorer-container">
       {/* Search & Filter Bar */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <div className="scene-explorer-header">
         <div style={{ position: 'relative' }}>
-          <Search size={14} style={{ position: 'absolute', left: '8px', top: '9px', color: 'var(--text-dim)' }} />
+          <Search size={14} style={{ position: 'absolute', left: '10px', top: '10px', color: 'var(--text-dim)' }} />
           <input
             type="text"
-            placeholder="Search hierarchy..."
+            placeholder="Search scene nodes..."
             value={searchQuery}
             onChange={handleSearchChange}
-            style={{ width: '100%', paddingLeft: '28px' }}
+            style={{ width: '100%', paddingLeft: '32px' }}
           />
         </div>
 
@@ -82,7 +99,7 @@ export const ObjectHierarchy: React.FC = () => {
             onChange={handleCategoryChange}
             style={{ flex: 1, fontSize: '11px' }}
           >
-            <option value="all">All Categories</option>
+            <option value="all">All Categories ({nodes.size})</option>
             <option value="terrain">Terrain</option>
             <option value="floor_ground">Floor / Ground</option>
             <option value="building">Building / Habitat</option>
@@ -95,53 +112,64 @@ export const ObjectHierarchy: React.FC = () => {
             <option value="unknown">Unknown</option>
           </select>
 
-          <button className="margin-btn" onClick={handleShowAll} title="Show all objects">
+          <button type="button" className="margin-btn" onClick={handleShowAll} title="Show all objects">
             Show All
           </button>
-          <button className="margin-btn" onClick={handleHideAll} title="Hide all objects">
+          <button type="button" className="margin-btn" onClick={handleHideAll} title="Hide all objects">
             Hide All
           </button>
         </div>
       </div>
 
-      {/* Selected Object Quick Spawn Action Banner */}
+      {/* Selected Object Quick Banner */}
       {selectedNode && (
-        <div style={{
-          background: 'rgba(0, 240, 255, 0.08)',
-          border: '1px solid rgba(0, 240, 255, 0.3)',
-          borderRadius: 'var(--radius-sm)',
-          padding: '8px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '6px',
-        }}>
+        <div className="selected-node-banner">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', color: 'var(--text-dim)' }}>SELECTED OBJECT</span>
-            <span style={{ fontSize: '11px', color: 'var(--accent-cyan)', fontWeight: 600 }}>{selectedNode.name}</span>
+            <span style={{ fontSize: '10px', color: 'var(--text-dim)', letterSpacing: '0.5px' }}>SELECTED NODE</span>
+            <span style={{ fontSize: '11px', color: 'var(--accent-cyan)', fontWeight: 600, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {selectedNode.name}
+            </span>
           </div>
-          <button
-            className="nav-btn-primary"
-            style={{ width: '100%', justifyContent: 'center', fontSize: '11px', padding: '5px' }}
-            onClick={(e) => handleSpawnOnNode(e, selectedNode)}
-            title="Set player spawn point on top of this object"
-          >
-            <MapPin size={13} />
-            <span>Spawn Player On This Object</span>
-          </button>
+
+          <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+            {onFocusNode && (
+              <button
+                type="button"
+                className="nav-btn"
+                style={{ flex: 1, justifyContent: 'center', fontSize: '11px', padding: '5px' }}
+                onClick={(e) => handleFocusNode(e, selectedNode)}
+                title="Center camera on this object"
+              >
+                <Target size={12} />
+                <span>Focus View</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              className="nav-btn-primary"
+              style={{ flex: 1, justifyContent: 'center', fontSize: '11px', padding: '5px' }}
+              onClick={(e) => handleSpawnOnNode(e, selectedNode)}
+              title="Set spawn position directly on top of this object"
+            >
+              <MapPin size={12} />
+              <span>Spawn Here</span>
+            </button>
+          </div>
         </div>
       )}
 
-      <div style={{ fontSize: '11px', color: 'var(--text-dim)', display: 'flex', justifyContent: 'space-between' }}>
+      <div style={{ fontSize: '11px', color: 'var(--text-dim)', display: 'flex', justifyContent: 'space-between', padding: '0 4px' }}>
         <span>OBJECTS ({nodeList.length} of {nodes.size})</span>
-        <span style={{ color: 'var(--accent-cyan)', fontSize: '10px' }}>
+        <span style={{ color: 'var(--accent-cyan)', fontSize: '10px', fontFamily: 'var(--font-mono)' }}>
           Spawn: ({spawnPoint.position[0].toFixed(1)}, {spawnPoint.position[1].toFixed(1)}, {spawnPoint.position[2].toFixed(1)})
         </span>
       </div>
 
-      {/* Node List */}
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+      {/* Node Hierarchy List */}
+      <div className="scene-node-list">
         {nodeList.length === 0 ? (
-          <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-dim)' }}>
+          <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-dim)', fontSize: '12px' }}>
             No objects matched search or filter criteria.
           </div>
         ) : (
@@ -154,24 +182,37 @@ export const ObjectHierarchy: React.FC = () => {
                 onClick={() => handleSelectNode(node)}
               >
                 <button
-                  style={{ background: 'none', padding: '2px', color: node.visible ? 'var(--text-main)' : 'var(--text-dim)' }}
+                  type="button"
+                  style={{ background: 'none', border: 'none', padding: '3px', color: node.visible ? 'var(--text-main)' : 'var(--text-dim)', cursor: 'pointer' }}
                   onClick={(e) => handleToggleVisibility(e, node)}
                   title={node.visible ? 'Hide object' : 'Show object'}
                 >
                   {node.visible ? <Eye size={13} /> : <EyeOff size={13} />}
                 </button>
 
-                <Box size={13} color={node.hasMeshes ? '#00f0ff' : 'var(--text-dim)'} />
+                <Box size={13} color={node.hasMeshes ? 'var(--accent-cyan)' : 'var(--text-dim)'} style={{ flexShrink: 0 }} />
 
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {node.name}
                 </span>
 
-                <span className={`category-badge cat-${node.category}`} style={{ fontSize: '9px', padding: '1px 4px' }}>
+                <span className={`category-badge cat-${node.category}`} style={{ fontSize: '9px', padding: '1px 5px' }}>
                   {node.category}
                 </span>
 
+                {onFocusNode && (
+                  <button
+                    type="button"
+                    style={{ background: 'none', border: 'none', padding: '2px 4px', cursor: 'pointer', color: 'var(--text-muted)' }}
+                    onClick={(e) => handleFocusNode(e, node)}
+                    title={`Focus camera on ${node.name}`}
+                  >
+                    <Target size={12} />
+                  </button>
+                )}
+
                 <button
+                  type="button"
                   style={{
                     background: 'none',
                     border: 'none',
@@ -180,7 +221,6 @@ export const ObjectHierarchy: React.FC = () => {
                     color: 'var(--accent-cyan)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '2px',
                   }}
                   onClick={(e) => handleSpawnOnNode(e, node)}
                   title={`Spawn player directly on ${node.name}`}

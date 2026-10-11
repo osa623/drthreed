@@ -1,5 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { Target, Layers, Sparkles, UploadCloud, Footprints } from 'lucide-react';
 import { useEditorStore, editorStore } from '../state/editorStore';
+import { useTheme, themeStore } from '../state/themeStore';
 import { SceneManager } from '../engine/SceneManager';
 import { RenderManager } from '../engine/RenderManager';
 import { PhysicsManager } from '../physics/PhysicsManager';
@@ -14,9 +16,10 @@ interface SceneViewportProps {
     lightingManager: LightingManager;
     playerController: PlayerController;
   }) => void;
+  onLoadSample?: () => void;
 }
 
-export const SceneViewport: React.FC<SceneViewportProps> = ({ onEngineReady }) => {
+export const SceneViewport: React.FC<SceneViewportProps> = ({ onEngineReady, onLoadSample }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isPointerLocked, setIsPointerLocked] = useState(false);
@@ -27,6 +30,8 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({ onEngineReady }) =
   const lightingManagerRef = useRef<LightingManager | null>(null);
   const playerControllerRef = useRef<PlayerController | null>(null);
 
+  const { theme } = useTheme();
+
   const {
     viewMode,
     lightingSettings,
@@ -35,6 +40,7 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({ onEngineReady }) =
     showPhysicsDebug,
     playerLiveState,
     nodes,
+    isLoading,
   } = useEditorStore();
 
   // Initialize Core 3D and Physics Engine
@@ -69,6 +75,9 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({ onEngineReady }) =
       physicsManagerRef.current = physicsMgr;
       lightingManagerRef.current = lightingMgr;
       playerControllerRef.current = playerCtrl;
+
+      // Sync initial background theme
+      sceneMgr.setBackgroundTheme(themeStore.getTheme());
 
       // Attach physics debug group to scene
       sceneMgr.scene.add(physicsMgr.getDebugGroup());
@@ -222,6 +231,13 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({ onEngineReady }) =
     }
   }, [lightingSettings]);
 
+  // Sync Theme background
+  useEffect(() => {
+    if (sceneManagerRef.current) {
+      sceneManagerRef.current.setBackgroundTheme(theme);
+    }
+  }, [theme]);
+
   // Sync Selection highlight
   useEffect(() => {
     if (sceneManagerRef.current) {
@@ -244,8 +260,83 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({ onEngineReady }) =
     });
   }, [nodes]);
 
+  const handleFocusSelected = () => {
+    if (selectedNodeId && sceneManagerRef.current) {
+      sceneManagerRef.current.focusNode(selectedNodeId);
+    }
+  };
+
+  const handleToggleWireframe = () => {
+    editorStore.setPhysicsDebug(!showPhysicsDebug);
+  };
+
   return (
     <div className="viewport-container" ref={containerRef}>
+      {/* Floating Viewport Toolbar (Orbit Mode) */}
+      {viewMode === 'orbit' && (
+        <div className="floating-viewport-toolbar">
+          {selectedNodeId && (
+            <button
+              type="button"
+              className="viewport-toolbar-btn"
+              onClick={handleFocusSelected}
+              title="Focus camera on selected object"
+            >
+              <Target size={13} color="var(--accent-cyan)" />
+              <span>Focus Selected</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            className={`viewport-toolbar-btn ${showPhysicsDebug ? 'active' : ''}`}
+            onClick={handleToggleWireframe}
+            title="Toggle Rapier collider wireframes"
+          >
+            <Layers size={13} />
+            <span>Wireframe</span>
+          </button>
+
+          <button
+            type="button"
+            className="viewport-toolbar-btn"
+            onClick={() => editorStore.setViewMode('fly')}
+            title="Switch to Free-Fly mode"
+          >
+            <Sparkles size={13} color="#d166ff" />
+            <span>Fly Mode</span>
+          </button>
+
+          <button
+            type="button"
+            className="viewport-toolbar-btn"
+            onClick={() => editorStore.setViewMode('first_person')}
+            title="Switch to First-Person mode"
+          >
+            <Footprints size={13} color="var(--accent-emerald)" />
+            <span>Explore Mode</span>
+          </button>
+        </div>
+      )}
+
+      {/* Initial Empty State Banner if no nodes loaded */}
+      {nodes.size === 0 && !isLoading && (
+        <div className="viewport-empty-overlay">
+          <UploadCloud size={48} color="var(--accent-cyan)" />
+          <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-main)', marginTop: '8px' }}>
+            Bring your 3D world into view
+          </h2>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '420px', textAlign: 'center', lineHeight: 1.6 }}>
+            Drop a supported .glb or .gltf file anywhere in the workspace to begin inspecting, or load the built-in Mars Research Outpost environment.
+          </p>
+          {onLoadSample && (
+            <button type="button" className="btn-primary-pill" onClick={onLoadSample} style={{ marginTop: '12px' }}>
+              <Sparkles size={15} />
+              <span>Load Mars Outpost Sample</span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* First-Person / Fly Mode HUD Overlay */}
       {(viewMode === 'first_person' || viewMode === 'fly') && (

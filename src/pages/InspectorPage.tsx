@@ -4,9 +4,10 @@ import {
   Layers,
   Tag,
   Shield,
-  Mountain,
   Sun,
   Sliders,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { NavigationNavbar } from '../components/NavigationNavbar';
 import { SceneViewport } from '../components/SceneViewport';
@@ -17,8 +18,10 @@ import { TerrainSettingsPanel } from '../components/TerrainSettingsPanel';
 import { LightingPanel } from '../components/LightingPanel';
 import { PlayControls } from '../components/PlayControls';
 import { PerformanceStats } from '../components/PerformanceStats';
+import { InspectorStatusBar } from '../components/InspectorStatusBar';
 import { FileDropZone } from '../components/FileDropZone';
 import { LoadingOverlay } from '../components/LoadingOverlay';
+import { HelpShortcutsModal } from '../components/HelpShortcutsModal';
 
 import { SceneManager } from '../engine/SceneManager';
 import { PhysicsManager } from '../physics/PhysicsManager';
@@ -28,13 +31,20 @@ import { GLBImporter } from '../engine/GLBImporter';
 import { SceneAnalyzer } from '../engine/SceneAnalyzer';
 import { SampleSceneBuilder } from '../engine/SampleSceneBuilder';
 import { editorStore, useEditorStore } from '../state/editorStore';
+import type { SpawnPointConfig } from '../state/types';
 import { validateGLBFile, validateHDRFile } from '../utils/validation';
 
-type SidebarTab = 'hierarchy' | 'discovery' | 'colliders' | 'terrain' | 'lighting' | 'motion';
+type LeftSidebarTab = 'tree' | 'inventory';
+type RightSidebarTab = 'colliders' | 'lighting' | 'locomotion';
 
 export const InspectorPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<SidebarTab>('hierarchy');
-  const { viewMode } = useEditorStore();
+  const [leftTab, setLeftTab] = useState<LeftSidebarTab>('tree');
+  const [rightTab, setRightTab] = useState<RightSidebarTab>('colliders');
+  const [isLeftOpen, setIsLeftOpen] = useState(true);
+  const [isRightOpen, setIsRightOpen] = useState(true);
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  const { viewMode, nodes } = useEditorStore();
 
   const sceneManagerRef = useRef<SceneManager | null>(null);
   const physicsManagerRef = useRef<PhysicsManager | null>(null);
@@ -97,10 +107,109 @@ export const InspectorPage: React.FC = () => {
         },
       });
 
+      // Update 3D spawn marker beacon in scene
+      sceneManagerRef.current.updateSpawnMarker(smartSpawn.safePosition, true);
+
+      if (playerControllerRef.current) {
+        playerControllerRef.current.spawn({
+          position: smartSpawn.safePosition,
+          rotationY: 0,
+          eyeHeight: 1.65,
+          isValidated: smartSpawn.isValidated,
+        });
+      }
+
       editorStore.setLoading(false);
     },
     []
   );
+
+  // Spawn player at a given node with true world coordinates
+  const handleSpawnAtNode = useCallback((nodeId: string) => {
+    if (!sceneManagerRef.current) return;
+    const box = sceneManagerRef.current.getObjectWorldBounds(nodeId);
+    const node = editorStore.getState().nodes.get(nodeId);
+    if (!box || box.isEmpty() || !node) return;
+
+    const center = box.getCenter(new THREE.Vector3());
+    const topY = parseFloat(box.max.y.toFixed(2));
+
+    let spawnY = topY;
+    let isValidated = false;
+
+    if (physicsManagerRef.current) {
+      const safe = physicsManagerRef.current.findSafeSpawn(center.x, center.z);
+      if (safe.found && Math.abs(safe.safeY - topY) < 4.0) {
+        spawnY = parseFloat(safe.safeY.toFixed(2));
+        isValidated = true;
+      }
+    }
+
+    const newSpawnPos: [number, number, number] = [
+      parseFloat(center.x.toFixed(2)),
+      spawnY,
+      parseFloat(center.z.toFixed(2)),
+    ];
+
+    const newSpawnConfig: SpawnPointConfig = {
+      position: newSpawnPos,
+      rotationY: 0,
+      eyeHeight: 1.65,
+      isValidated,
+      groundHeightFound: spawnY,
+    };
+
+    editorStore.setState({
+      spawnPoint: newSpawnConfig,
+      selectedNodeId: nodeId,
+    });
+
+    sceneManagerRef.current.updateSpawnMarker(
+      newSpawnPos,
+      editorStore.getState().viewMode === 'orbit'
+    );
+
+    if (playerControllerRef.current) {
+      playerControllerRef.current.spawn(newSpawnConfig);
+    }
+  }, []);
+
+  // Automatically find safe spawn across scene
+  const handleAutoFindSafeSpawn = useCallback(() => {
+    if (!physicsManagerRef.current || !sceneManagerRef.current) return;
+    const { nodes } = editorStore.getState();
+    if (nodes.size === 0) return;
+
+    const bounds = new THREE.Box3();
+    nodes.forEach((n) => {
+      bounds.union(
+        new THREE.Box3(
+          new THREE.Vector3(...n.worldBoundingBox.min),
+          new THREE.Vector3(...n.worldBoundingBox.max)
+        )
+      );
+    });
+
+    const smart = physicsManagerRef.current.calculateSmartSpawn(bounds, nodes);
+    const newSpawnConfig: SpawnPointConfig = {
+      position: smart.safePosition,
+      rotationY: 0,
+      eyeHeight: 1.65,
+      isValidated: smart.isValidated,
+      groundHeightFound: smart.isValidated ? smart.safePosition[1] : undefined,
+    };
+
+    editorStore.setState({ spawnPoint: newSpawnConfig });
+
+    sceneManagerRef.current.updateSpawnMarker(
+      smart.safePosition,
+      editorStore.getState().viewMode === 'orbit'
+    );
+
+    if (playerControllerRef.current) {
+      playerControllerRef.current.spawn(newSpawnConfig);
+    }
+  }, []);
 
   // Load built-in Mars Research Outpost
   const handleLoadSample = useCallback(() => {
@@ -176,6 +285,13 @@ export const InspectorPage: React.FC = () => {
     [ingestScene]
   );
 
+  // Focus node in scene
+  const handleFocusNode = useCallback((nodeId: string) => {
+    if (sceneManagerRef.current) {
+      sceneManagerRef.current.focusNode(nodeId);
+    }
+  }, []);
+
   // Hook up engine instances once ready
   const handleEngineReady = useCallback(
     (instances: {
@@ -189,7 +305,7 @@ export const InspectorPage: React.FC = () => {
       lightingManagerRef.current = instances.lightingManager;
       playerControllerRef.current = instances.playerController;
 
-      // Automatically load the rich Mars Outpost sample scene on first load!
+      // Automatically load Mars Outpost sample scene on first load!
       handleLoadSample();
     },
     [handleLoadSample]
@@ -197,11 +313,12 @@ export const InspectorPage: React.FC = () => {
 
   return (
     <div className="inspector-layout">
-      {/* Top Navigation Bar */}
+      {/* Top Application Bar */}
       <NavigationNavbar
         onLoadSample={handleLoadSample}
         onOpenGlbPicker={() => glbInputRef.current?.click()}
         onOpenHdrPicker={() => hdrInputRef.current?.click()}
+        onOpenHelp={() => setHelpOpen(true)}
       />
 
       {/* Hidden File Pickers */}
@@ -226,102 +343,231 @@ export const InspectorPage: React.FC = () => {
         }}
       />
 
-      {/* Main Workspace Body with Drag-and-Drop Zone */}
+      {/* Main Workspace Body */}
       <div className="workspace-body">
         <FileDropZone onFileDrop={handleLoadFile}>
-          <div style={{ display: 'flex', width: '100%', height: '100%', position: 'relative' }}>
-            {/* 3D Viewport */}
-            <SceneViewport onEngineReady={handleEngineReady} />
+          <div className="workspace-inner-flex">
 
-            {/* Performance Stats Overlay */}
-            <PerformanceStats />
-
-            {/* Inspector Sidebar (hidden in first-person mode for immersion) */}
+            {/* =======================================================
+                Left Sidebar — Scene Explorer (Hierarchy & Inventory)
+                ======================================================= */}
             {viewMode === 'orbit' && (
-              <aside className="inspector-sidebar">
-                {/* Tabs */}
-                <div className="sidebar-tabs">
-                  <button
-                    className={`sidebar-tab ${activeTab === 'hierarchy' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('hierarchy')}
-                    title="Scene Hierarchy"
-                  >
-                    <Layers size={13} />
-                    <span>Tree</span>
-                  </button>
+              <aside className={`inspector-sidebar sidebar-left ${isLeftOpen ? 'open' : 'collapsed'}`}>
+                {isLeftOpen ? (
+                  <>
+                    <div className="sidebar-header">
+                      <div className="sidebar-header-title">
+                        <Layers size={14} color="var(--accent-cyan)" />
+                        <span>Scene Explorer</span>
+                        <span className="sidebar-count-badge">{nodes.size}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="sidebar-collapse-btn"
+                        onClick={() => setIsLeftOpen(false)}
+                        title="Collapse Scene Explorer"
+                        aria-label="Collapse Scene Explorer"
+                      >
+                        <ChevronLeft size={14} />
+                      </button>
+                    </div>
 
-                  <button
-                    className={`sidebar-tab ${activeTab === 'discovery' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('discovery')}
-                    title="Object Discovery & Classification"
-                  >
-                    <Tag size={13} />
-                    <span>Classify</span>
-                  </button>
+                    {/* Left Panel Tabs */}
+                    <div className="sidebar-tabs">
+                      <button
+                        type="button"
+                        className={`sidebar-tab ${leftTab === 'tree' ? 'active' : ''}`}
+                        onClick={() => setLeftTab('tree')}
+                      >
+                        <Layers size={12} />
+                        <span>Hierarchy</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`sidebar-tab ${leftTab === 'inventory' ? 'active' : ''}`}
+                        onClick={() => setLeftTab('inventory')}
+                      >
+                        <Tag size={12} />
+                        <span>Inventory</span>
+                      </button>
+                    </div>
 
+                    <div className="panel-content">
+                      {leftTab === 'tree' && (
+                        <ObjectHierarchy
+                          onFocusNode={handleFocusNode}
+                          onSpawnAtNode={handleSpawnAtNode}
+                        />
+                      )}
+                      {leftTab === 'inventory' && <ObjectDiscoveryPanel />}
+                    </div>
+                  </>
+                ) : (
                   <button
-                    className={`sidebar-tab ${activeTab === 'colliders' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('colliders')}
-                    title="Rapier Colliders"
+                    type="button"
+                    className="sidebar-collapsed-strip"
+                    onClick={() => setIsLeftOpen(true)}
+                    title="Expand Scene Explorer"
+                    aria-label="Expand Scene Explorer"
                   >
-                    <Shield size={13} />
-                    <span>Colliders</span>
+                    <ChevronRight size={14} />
+                    <span className="collapsed-strip-label">SCENE EXPLORER ({nodes.size})</span>
                   </button>
-
-                  <button
-                    className={`sidebar-tab ${activeTab === 'terrain' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('terrain')}
-                    title="Terrain & Spawn"
-                  >
-                    <Mountain size={13} />
-                    <span>Terrain</span>
-                  </button>
-
-                  <button
-                    className={`sidebar-tab ${activeTab === 'lighting' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('lighting')}
-                    title="Lighting & HDRI"
-                  >
-                    <Sun size={13} />
-                    <span>Lighting</span>
-                  </button>
-
-                  <button
-                    className={`sidebar-tab ${activeTab === 'motion' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('motion')}
-                    title="Movement Settings"
-                  >
-                    <Sliders size={13} />
-                    <span>Motion</span>
-                  </button>
-                </div>
-
-                {/* Panel Content */}
-                <div className="panel-content">
-                  {activeTab === 'hierarchy' && <ObjectHierarchy />}
-                  {activeTab === 'discovery' && <ObjectDiscoveryPanel />}
-                  {activeTab === 'colliders' && (
-                    <ColliderSettingsPanel onRebuildColliders={handleRebuildColliders} />
-                  )}
-                  {activeTab === 'terrain' && (
-                    <TerrainSettingsPanel physicsManager={physicsManagerRef.current} />
-                  )}
-                  {activeTab === 'lighting' && (
-                    <LightingPanel
-                      lightingManager={lightingManagerRef.current}
-                      onOpenHdrPicker={() => hdrInputRef.current?.click()}
-                    />
-                  )}
-                  {activeTab === 'motion' && <PlayControls />}
-                </div>
+                )}
               </aside>
             )}
+
+            {/* =======================================================
+                Center 3D Viewport
+                ======================================================= */}
+            <div className="center-viewport-wrapper">
+              <SceneViewport
+                onEngineReady={handleEngineReady}
+                onLoadSample={handleLoadSample}
+              />
+
+              {/* Performance Stats HUD Overlay */}
+              <PerformanceStats />
+
+              {/* Viewport Floating Re-expand Buttons when panels are collapsed in orbit mode */}
+              {viewMode === 'orbit' && (!isLeftOpen || !isRightOpen) && (
+                <div className="viewport-dock-controls">
+                  {!isLeftOpen && (
+                    <button
+                      type="button"
+                      className="dock-toggle-btn"
+                      onClick={() => setIsLeftOpen(true)}
+                      title="Expand Left Panel"
+                    >
+                      <Layers size={13} />
+                      <span>Scene Explorer</span>
+                    </button>
+                  )}
+                  {!isRightOpen && (
+                    <button
+                      type="button"
+                      className="dock-toggle-btn"
+                      onClick={() => setIsRightOpen(true)}
+                      title="Expand Right Panel"
+                    >
+                      <Sliders size={13} />
+                      <span>Properties & Environment</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* =======================================================
+                Right Sidebar — Properties & Environment
+                ======================================================= */}
+            {viewMode === 'orbit' && (
+              <aside className={`inspector-sidebar sidebar-right ${isRightOpen ? 'open' : 'collapsed'}`}>
+                {isRightOpen ? (
+                  <>
+                    <div className="sidebar-header">
+                      <div className="sidebar-header-title">
+                        <Sliders size={14} color="var(--accent-cyan)" />
+                        <span>Properties & Environment</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="sidebar-collapse-btn"
+                        onClick={() => setIsRightOpen(false)}
+                        title="Collapse Properties Panel"
+                        aria-label="Collapse Properties Panel"
+                      >
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+
+                    {/* Right Panel Tabs */}
+                    <div className="sidebar-tabs">
+                      <button
+                        type="button"
+                        className={`sidebar-tab ${rightTab === 'colliders' ? 'active' : ''}`}
+                        onClick={() => setRightTab('colliders')}
+                        title="Selected Object Properties & Rapier Colliders"
+                      >
+                        <Shield size={12} />
+                        <span>Colliders</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`sidebar-tab ${rightTab === 'lighting' ? 'active' : ''}`}
+                        onClick={() => setRightTab('lighting')}
+                        title="HDRI & Solar Lighting Configuration"
+                      >
+                        <Sun size={12} />
+                        <span>Lighting</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`sidebar-tab ${rightTab === 'locomotion' ? 'active' : ''}`}
+                        onClick={() => setRightTab('locomotion')}
+                        title="Terrain Limits, Autostepping & Movement Dynamics"
+                      >
+                        <Sliders size={12} />
+                        <span>Motion</span>
+                      </button>
+                    </div>
+
+                    <div className="panel-content">
+                      {rightTab === 'colliders' && (
+                        <ColliderSettingsPanel onRebuildColliders={handleRebuildColliders} />
+                      )}
+
+                      {rightTab === 'lighting' && (
+                        <LightingPanel
+                          lightingManager={lightingManagerRef.current}
+                          onOpenHdrPicker={() => hdrInputRef.current?.click()}
+                        />
+                      )}
+
+                      {rightTab === 'locomotion' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                          <TerrainSettingsPanel
+                            physicsManager={physicsManagerRef.current}
+                            onSpawnAtNode={handleSpawnAtNode}
+                            onAutoFindSpawn={handleAutoFindSafeSpawn}
+                          />
+                          <PlayControls />
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="sidebar-collapsed-strip right-strip"
+                    onClick={() => setIsRightOpen(true)}
+                    title="Expand Properties & Environment"
+                    aria-label="Expand Properties & Environment"
+                  >
+                    <ChevronLeft size={14} />
+                    <span className="collapsed-strip-label">PROPERTIES & LIGHTING</span>
+                  </button>
+                )}
+              </aside>
+            )}
+
           </div>
         </FileDropZone>
       </div>
 
+      {/* Bottom Technical Telemetry Status Bar */}
+      <InspectorStatusBar />
+
       {/* Global Loading & Error Modal */}
       <LoadingOverlay />
+
+      {/* Navigation Controls & Keyboard Shortcuts Modal */}
+      <HelpShortcutsModal
+        isOpen={helpOpen}
+        onClose={() => setHelpOpen(false)}
+      />
     </div>
   );
 };

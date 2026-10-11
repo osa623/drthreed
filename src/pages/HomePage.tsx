@@ -2,34 +2,54 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import * as THREE from 'three';
 import {
-  Box,
-  Compass,
   ArrowRight,
-  Shield,
+  ArrowUpRight,
   Layers,
-  Mountain,
-  Sun,
-  Activity,
-  Terminal,
-  AlertTriangle,
-  FileCode,
   Sparkles,
+  Terminal,
+  FileCode,
+  ExternalLink,
+  Menu,
+  X,
 } from 'lucide-react';
+import { DrThreeDLogo } from '../components/brand/DrThreeDLogo';
+import { ThemeToggle } from '../components/ThemeToggle';
+import { ShowcaseGallery4 } from '../components/ShowcaseGallery4';
+import { ABOUT_CONTENT } from '../config/siteContent';
 
 export const HomePage: React.FC = () => {
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const [webGLError, setWebGLError] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Initialize interactive 3D preview scene on hero
+  // Lock background scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileMenuOpen]);
+
+  // Close mobile menu on ESC
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  // Initialize interactive 3D WebGL preview scene on hero background
   useEffect(() => {
     if (!previewContainerRef.current) return;
     const container = previewContainerRef.current;
 
     const canvas = document.createElement('canvas');
-    canvas.className = 'hero-canvas';
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-    canvas.style.display = 'block';
+    canvas.className = 'hero-canvas-bg';
     container.appendChild(canvas);
 
     let renderer: THREE.WebGLRenderer;
@@ -46,58 +66,62 @@ export const HomePage: React.FC = () => {
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
-    camera.position.set(0, 4, 10);
-    camera.lookAt(0, 0.5, 0);
+    camera.position.set(0, 3.8, 9.5);
+    camera.lookAt(0, 0.6, 0);
 
-    // Subtle lighting
-    const ambLight = new THREE.AmbientLight(0x223344, 1.2);
+    // Atmospheric lighting
+    const ambLight = new THREE.AmbientLight(0x223344, 1.4);
     scene.add(ambLight);
-    const dirLight = new THREE.DirectionalLight(0x00f0ff, 2.5);
-    dirLight.position.set(5, 10, 7);
+    const dirLight = new THREE.DirectionalLight(0x00f0ff, 2.8);
+    dirLight.position.set(6, 12, 8);
     scene.add(dirLight);
 
-    // Procedural sci-fi habitat dome & contour terrain wireframe
+    const warmLight = new THREE.PointLight(0xe63946, 2.0, 14);
+    warmLight.position.set(-3, 2, -2);
+    scene.add(warmLight);
+
+    // Procedural sci-fi habitat dome & contour terrain wireframe group
     const previewGroup = new THREE.Group();
 
     // Habitat Dome
-    const domeGeo = new THREE.SphereGeometry(2.2, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+    const domeGeo = new THREE.SphereGeometry(2.2, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2);
     const domeMat = new THREE.MeshStandardMaterial({
-      color: 0x16202e,
-      roughness: 0.3,
-      metalness: 0.8,
+      color: 0x141d28,
+      roughness: 0.25,
+      metalness: 0.85,
     });
     const domeMesh = new THREE.Mesh(domeGeo, domeMat);
     previewGroup.add(domeMesh);
 
     // Habitat Wireframe Accents
     const wireGeo = new THREE.WireframeGeometry(domeGeo);
-    const wireMat = new THREE.LineBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.7 });
+    const wireMat = new THREE.LineBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.55 });
     const wireLine = new THREE.LineSegments(wireGeo, wireMat);
     previewGroup.add(wireLine);
 
     // Surrounding terrain wireframe grid
-    const terrainGeo = new THREE.PlaneGeometry(16, 16, 20, 20);
+    const terrainGeo = new THREE.PlaneGeometry(20, 20, 24, 24);
     terrainGeo.rotateX(-Math.PI / 2);
     const pos = terrainGeo.attributes.position;
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i);
       const z = pos.getZ(i);
       const dist = Math.sqrt(x * x + z * z);
-      if (dist > 3) {
-        pos.setY(i, Math.sin(x * 0.5) * 0.4 + Math.cos(z * 0.5) * 0.4);
+      if (dist > 2.8) {
+        pos.setY(i, Math.sin(x * 0.55) * 0.45 + Math.cos(z * 0.55) * 0.45);
       }
     }
     terrainGeo.computeVertexNormals();
 
     const terrainWire = new THREE.WireframeGeometry(terrainGeo);
-    const terrainWireMat = new THREE.LineBasicMaterial({ color: 0x00e699, transparent: true, opacity: 0.25 });
+    const terrainWireMat = new THREE.LineBasicMaterial({ color: 0xe63946, transparent: true, opacity: 0.35 });
     const terrainLine = new THREE.LineSegments(terrainWire, terrainWireMat);
     previewGroup.add(terrainLine);
 
-    // Satellite dish
-    const dishGeo = new THREE.CylinderGeometry(0.8, 0.2, 0.3, 8);
+    // Satellite communications dish
+    const dishGeo = new THREE.CylinderGeometry(0.85, 0.2, 0.3, 12);
     const dishMesh = new THREE.Mesh(dishGeo, domeMat);
-    dishMesh.position.set(0, 2.4, 0);
+    dishMesh.position.set(0, 2.45, 0);
     previewGroup.add(dishMesh);
 
     scene.add(previewGroup);
@@ -107,27 +131,31 @@ export const HomePage: React.FC = () => {
     let mouseY = 0;
 
     const onMouseMove = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      mouseX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
-      mouseY = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+      const rect = container.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        mouseX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+        mouseY = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+      }
     };
     window.addEventListener('mousemove', onMouseMove);
 
     const resize = () => {
-      const w = canvas.clientWidth;
-      const h = canvas.clientHeight;
-      camera.aspect = w / (h || 1);
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h, false);
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      if (w > 0 && h > 0) {
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h, false);
+      }
     };
     resize();
     window.addEventListener('resize', resize);
 
     const render = () => {
-      previewGroup.rotation.y += 0.005;
-      camera.position.x = THREE.MathUtils.lerp(camera.position.x, mouseX * 2, 0.05);
-      camera.position.y = THREE.MathUtils.lerp(camera.position.y, 4 - mouseY * 1.5, 0.05);
-      camera.lookAt(0, 0.5, 0);
+      previewGroup.rotation.y += 0.003;
+      camera.position.x = THREE.MathUtils.lerp(camera.position.x, mouseX * 2.5, 0.04);
+      camera.position.y = THREE.MathUtils.lerp(camera.position.y, 3.8 - mouseY * 1.5, 0.04);
+      camera.lookAt(0, 0.6, 0);
 
       renderer.render(scene, camera);
       animId = requestAnimationFrame(render);
@@ -151,275 +179,507 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="home-page">
-      {/* Top Navbar */}
-      <nav className="home-nav">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Box size={20} color="#00f0ff" />
-          <span style={{ fontWeight: 700, fontSize: '16px', letterSpacing: '0.5px' }}>DrThreeD</span>
-          <span className="hero-tag" style={{ padding: '2px 8px', fontSize: '10px' }}>v1.0 WASM</span>
-        </div>
-
-        <div className="home-nav-links">
-          <a href="#workflow" className="home-nav-link">Workflow</a>
-          <a href="#features" className="home-nav-link">Capabilities</a>
-          <a href="#blender" className="home-nav-link">Blender Manual</a>
-          <a href="#limitations" className="home-nav-link">Specs & Limitations</a>
-          <Link to="/inspector" className="cta-button-primary" style={{ padding: '8px 16px', fontSize: '13px' }}>
-            <span>Open Inspector</span>
-            <ArrowRight size={14} />
+      {/* ===================================================================
+          Section 1 & 2: Top Dark Hero Section (With Integrated Header)
+          Directly matching Image 2 composition & layout
+          =================================================================== */}
+      <div className="reference-hero-container" ref={previewContainerRef}>
+        {/* Integrated Navigation Header */}
+        <header className="reference-header">
+          <Link to="/" style={{ textDecoration: 'none' }} title="DrThreeD Platform">
+            <DrThreeDLogo showVersion={false} size={28} />
           </Link>
-        </div>
-      </nav>
 
-      {/* Hero Section */}
-      <section className="hero-section">
-        <div className="hero-content">
-          <div className="hero-tag">
-            <Sparkles size={13} />
-            <span>REAL-TIME 3D SPATIAL COMPUTING & PHYSICS</span>
-          </div>
+          <nav className="reference-nav-links" aria-label="Main Navigation">
+            <Link to="/" className="reference-nav-item">Home</Link>
+            <a href="#platform" className="reference-nav-item">Platform</a>
+            <a href="#capabilities" className="reference-nav-item">
+              Features <span className="reference-badge-pill">v1</span>
+            </a>
+            <a href="#blender" className="reference-nav-item">Manual</a>
+            <a href="#about" className="reference-nav-item">About</a>
+            <ThemeToggle />
+          </nav>
 
-          <h1 className="hero-title">
-            Inspect, Analyze & Traverse <br />
-            <span className="hero-title-accent">3D Environments</span> in Real-Time
-          </h1>
-
-          <p className="hero-description">
-            Export Mars outposts, architectural complexes, modular habitats, and uneven terrain from Blender.
-            Inspect object hierarchies, configure Rapier 3D colliders with custom margins, and walk through in first-person—entirely in your browser with zero server uploads.
-          </p>
-
-          <div className="hero-actions">
-            <Link to="/inspector" className="cta-button-primary">
-              <span>Launch Inspection Workspace</span>
-              <ArrowRight size={16} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Link to="/inspector" className="reference-header-cta" title="Launch 3D Inspector">
+              <div className="header-avatar-circle">3D</div>
+              <span className="cta-text-full">Open Inspector</span>
+              <span className="cta-text-short">Inspector</span>
+              <ArrowUpRight size={14} />
             </Link>
 
-            <a href="#blender" className="cta-button-secondary">
-              <FileCode size={16} />
-              <span>Blender Guide</span>
+            <button
+              type="button"
+              className="mobile-nav-toggle"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle navigation menu"
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
+        </header>
+
+        {/* Mobile Navigation Drawer with Backdrop */}
+        {mobileMenuOpen && (
+          <>
+            <div
+              className="mobile-nav-drawer-backdrop"
+              onClick={() => setMobileMenuOpen(false)}
+              aria-hidden="true"
+            />
+            <div className="mobile-nav-drawer" role="dialog" aria-modal="true" aria-label="Mobile Navigation">
+              <div className="mobile-drawer-header">
+                <Link to="/" onClick={() => setMobileMenuOpen(false)}>
+                  <DrThreeDLogo showVersion={false} size={26} />
+                </Link>
+                <button
+                  type="button"
+                  className="mobile-drawer-close-btn"
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-label="Close navigation"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="mobile-drawer-links">
+                <Link to="/" className="mobile-drawer-link" onClick={() => setMobileMenuOpen(false)}>
+                  <span>Home</span>
+                  <ArrowRight size={14} style={{ opacity: 0.5 }} />
+                </Link>
+                <a href="#platform" className="mobile-drawer-link" onClick={() => setMobileMenuOpen(false)}>
+                  <span>Platform Architecture</span>
+                  <ArrowRight size={14} style={{ opacity: 0.5 }} />
+                </a>
+                <a href="#capabilities" className="mobile-drawer-link" onClick={() => setMobileMenuOpen(false)}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    Capabilities
+                    <span className="reference-badge-pill">v1</span>
+                  </span>
+                  <ArrowRight size={14} style={{ opacity: 0.5 }} />
+                </a>
+                <a href="#blender" className="mobile-drawer-link" onClick={() => setMobileMenuOpen(false)}>
+                  <span>Blender Export Guide</span>
+                  <ArrowRight size={14} style={{ opacity: 0.5 }} />
+                </a>
+                <a href="#about" className="mobile-drawer-link" onClick={() => setMobileMenuOpen(false)}>
+                  <span>About Project</span>
+                  <ArrowRight size={14} style={{ opacity: 0.5 }} />
+                </a>
+              </div>
+
+              <div className="mobile-drawer-footer">
+                <div className="mobile-drawer-footer-row">
+                  <span>Interface Theme</span>
+                  <ThemeToggle />
+                </div>
+                <Link
+                  to="/inspector"
+                  className="btn-pill-accent"
+                  style={{ justifyContent: 'center', width: '100%', padding: '13px 20px', fontSize: '14.5px' }}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <span>Open 3D Inspector Workspace</span>
+                  <ArrowUpRight size={16} />
+                </Link>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Hero Content Area */}
+        <div className="reference-hero-content">
+          <div>
+            <div className="reference-tag-label">
+              <span className="tag-square-icon" />
+              <span>3D ENVIRONMENT INSPECTION PLATFORM</span>
+            </div>
+
+            <h1 className="reference-hero-headline">
+              Next-Gen<br />
+              Inspection Platform for<br />
+              3D Environments.
+            </h1>
+          </div>
+
+          <div className="reference-hero-bottom">
+            <div className="hero-bottom-tags">
+              <span>+ Ingest</span>
+              <span>+ Inspect</span>
+              <span>+ Traverse</span>
+            </div>
+
+            <div className="hero-bottom-right">
+              <p className="hero-bottom-right-text">
+                Browser-native environment inspection, physics collider generation, and terrain traversal powered by WebGL 2.0 and Rapier 3D WebAssembly.
+              </p>
+
+              <div className="hero-bottom-actions">
+                <Link to="/inspector" className="btn-pill-accent">
+                  <span>Launch Inspector</span>
+                  <ArrowUpRight size={15} />
+                </Link>
+
+                <a href="#about" className="btn-pill-outline">
+                  <span>Explore Features</span>
+                  <ArrowUpRight size={14} />
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {webGLError && (
+          <div style={{ position: 'absolute', bottom: '16px', left: '54px', zIndex: 20, color: '#f87171', fontSize: '12px' }}>
+            {webGLError}
+          </div>
+        )}
+      </div>
+
+      {/* ===================================================================
+          Section 3: Slim Supporting Partner/Tech Strip (White Background)
+          =================================================================== */}
+      <section className="reference-strip-section" id="platform">
+        <div className="reference-strip-inner">
+          <div className="strip-left-label">
+            <Sparkles size={16} className="strip-star-icon" />
+            <span>ENGINEERED ON WEBGL 2.0 AND RAPIER 3D WEBASSEMBLY.</span>
+          </div>
+
+          <div className="strip-logos">
+            <span className="strip-logo-text">THREE.JS r186</span>
+            <span className="strip-logo-text">RAPIER 3D WASM</span>
+            <span className="strip-logo-text">KHRONOS glTF 2.0</span>
+            <span className="strip-logo-text">RADIANCE RGBE HDR</span>
+            <span className="strip-logo-text">DRACO COMPRESSION</span>
+          </div>
+        </div>
+      </section>
+
+      {/* ===================================================================
+          Section 4: Large Editorial Introduction (White Background)
+          =================================================================== */}
+      <section className="reference-intro-section">
+        <div className="reference-intro-inner">
+          <div className="reference-tag-label" style={{ color: '#64748b' }}>
+            <span className="tag-square-icon" />
+            <span>WHAT IS DRTHREED</span>
+          </div>
+
+          <h2 className="reference-intro-headline">
+            We replace heavyweight desktop 3D tooling with an instantaneous, browser-native inspection workspace for artists, engineers, and environment designers.{' '}
+            <span className="highlight-muted">
+              Inspect geometry, verify real-world scale, configure dynamic physics colliders, and traverse 3D terrain with zero software installs.
+            </span>
+          </h2>
+
+          <div className="reference-intro-side">
+            <a href="#about" className="reference-about-link">
+              <span>About DrThreeD</span>
+              <ArrowRight size={14} />
             </a>
           </div>
-
-          <div style={{ display: 'flex', gap: '20px', marginTop: '12px', fontSize: '12px', color: 'var(--text-dim)' }}>
-            <div>✓ Client-side Local Processing</div>
-            <div>✓ Rapier 3D WASM Kinematics</div>
-            <div>✓ Terrain-Aware Traversal</div>
-          </div>
-        </div>
-
-        {/* 3D Visual Preview */}
-        <div className="hero-preview-container" ref={previewContainerRef}>
-          <div className="preview-badge-overlay">
-            INTERACTIVE PREVIEW // RAPIER 3D WIREFRAME
-          </div>
-          {webGLError && (
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '12px', textAlign: 'center', padding: '20px' }}>
-              <div>{webGLError}</div>
-            </div>
-          )}
         </div>
       </section>
 
-      {/* Workflow Section */}
-      <section id="workflow" className="workflow-section">
-        <div className="section-container">
-          <div className="section-head">
-            <div className="section-badge">Streamlined Engineering Workflow</div>
-            <h2 className="section-heading">From Blender Model to Physical Exploration</h2>
-          </div>
-
-          <div className="workflow-steps-grid">
-            <div className="workflow-step-card">
-              <div className="workflow-step-num">01 / INGESTION</div>
-              <h3 className="workflow-step-title">Import & Scene Analysis</h3>
-              <p className="workflow-step-desc">
-                Drag and drop your self-contained .glb or .gltf environment. DrThreeD automatically scans the node graph,
-                measures bounding boxes, calculates footprint areas, and classifies objects into functional architectural categories.
-              </p>
-            </div>
-
-            <div className="workflow-step-card">
-              <div className="workflow-step-num">02 / CONFIGURATION</div>
-              <h3 className="workflow-step-title">Configure Rapier Colliders</h3>
-              <p className="workflow-step-desc">
-                No need to prepare physics shapes in Blender. Apply bounding boxes, convex hulls, or static trimesh colliders.
-                Expand clearance margins (+0.25m, +0.5m, +1.0m) and designate walkable terrain surfaces with immediate visual wireframes.
-              </p>
-            </div>
-
-            <div className="workflow-step-card">
-              <div className="workflow-step-num">03 / EXPLORATION</div>
-              <h3 className="workflow-step-title">First-Person Traversal</h3>
-              <p className="workflow-step-desc">
-                Transition seamlessly into first-person WASD navigation. Traverse uneven crater slopes, step over curbs with autostepping,
-                cross indoor-outdoor thresholds, and experience velocity-driven head bob with a stable horizon.
-              </p>
-            </div>
-          </div>
+      {/* ===================================================================
+          Section 5: Horizontal Image Gallery (4 Tall Rounded Cards)
+          =================================================================== */}
+      <section className="reference-gallery-section">
+        <div className="reference-gallery-inner">
+          <ShowcaseGallery4 />
         </div>
       </section>
 
-      {/* Features Grid */}
-      <section id="features" className="features-section">
-        <div className="section-head">
-          <div className="section-badge">Core Capabilities</div>
-          <h2 className="section-heading">Engineered for Technical Inspection</h2>
-        </div>
-
-        <div className="features-grid">
-          <div className="feature-box">
-            <div className="feature-icon-wrap">
-              <Layers size={20} />
-            </div>
-            <h3 className="feature-title">Automatic Scene Graph Inventory</h3>
-            <p className="feature-text">
-              Categorizes nodes into Buildings, Floors, Walls, Terrain, Rocks, Furniture, Equipment, and Props using transparent rule-based heuristics.
-              Provides confidence ratings, bounding box dimensions, and full user override controls.
-            </p>
+      {/* ===================================================================
+          Section 6: By The Numbers (4-Column Typographic Layout with Dashed Lines)
+          =================================================================== */}
+      <section className="reference-numbers-section">
+        <div className="reference-numbers-inner">
+          <div className="reference-tag-label" style={{ color: '#64748b' }}>
+            <span className="tag-square-icon" />
+            <span>BY THE NUMBERS</span>
           </div>
 
-          <div className="feature-box">
-            <div className="feature-icon-wrap">
-              <Shield size={20} />
-            </div>
-            <h3 className="feature-title">Advanced Collider Footprints & Margins</h3>
-            <p className="feature-text">
-              Expand safety margins around machinery or habitats. A margin of <em>m</em> expands total width and depth by <em>2m</em>.
-              Preview physical shapes in Three.js and separate visual mesh rendering from physics collision states.
-            </p>
-          </div>
-
-          <div className="feature-box">
-            <div className="feature-icon-wrap">
-              <Mountain size={20} />
-            </div>
-            <h3 className="feature-title">Terrain-Aware Slope & Obstacle Traversal</h3>
-            <p className="feature-text">
-              Rapier 3D kinematic character controller with configurable slope limits (default 42°) and autostep height (default 0.35m).
-              Prevents climbing vertical walls while allowing effortless movement across natural slopes and steps.
-            </p>
-          </div>
-
-          <div className="feature-box">
-            <div className="feature-icon-wrap">
-              <Activity size={20} />
-            </div>
-            <h3 className="feature-title">Human-Like Movement Dynamics</h3>
-            <p className="feature-text">
-              Organic idle breathing and velocity-driven head bob scaled by physical speed.
-              Maintains an unrolled, stable camera horizon across uneven ground and includes a dedicated Reduced Motion mode for comfort.
-            </p>
-          </div>
-
-          <div className="feature-box">
-            <div className="feature-icon-wrap">
-              <Sun size={20} />
-            </div>
-            <h3 className="feature-title">HDRI Environment & Solar Lighting</h3>
-            <p className="feature-text">
-              Import 32-bit Radiance (.hdr) files via RGBELoader and PMREMGenerator.
-              Adjust exposure, sun azimuth/elevation, directional shadow quality, and environment rotation with instantaneous feedback.
-            </p>
-          </div>
-
-          <div className="feature-box">
-            <div className="feature-icon-wrap">
-              <Compass size={20} />
-            </div>
-            <h3 className="feature-title">Safe Spawn Placement & Elevation Tracking</h3>
-            <p className="feature-text">
-              Downward raycasts determine safe spawn elevations above complex terrain, preventing player capsules from clipping into geometry or falling into the void.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Blender Workflow Section */}
-      <section id="blender" className="blender-section">
-        <div className="section-container">
-          <div className="section-head">
-            <div className="section-badge">Blender GLB / glTF Guide</div>
-            <h2 className="section-heading">Best Practices for Web 3D Inspection</h2>
-          </div>
-
-          <div className="blender-grid">
-            <div className="blender-card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-cyan)', fontWeight: 600 }}>
-                <Terminal size={16} />
-                <span>Blender Export Configuration</span>
+          <div className="reference-numbers-grid">
+            <div className="reference-number-col">
+              <div className="reference-big-stat">0ms</div>
+              <div className="reference-dashed-divider" />
+              <div className="reference-stat-title">Server Latency</div>
+              <div className="reference-stat-desc">
+                100% in-browser WebGL and WebAssembly execution. 3D models are parsed and processed locally with zero network delays.
               </div>
-              <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-                For flawless scale, collision accuracy, and navigation, configure your Blender project using standard conventions:
-              </p>
-              <ul style={{ paddingLeft: '20px', color: 'var(--text-muted)', fontSize: '13px', lineHeight: '1.7' }}>
-                <li><strong>Unit Scale:</strong> Keep Unit System = Metric, Length = Meters (1 Blender unit = 1 meter).</li>
-                <li><strong>Apply Transforms:</strong> Select all objects and press <code style={{ color: 'var(--accent-cyan)' }}>Ctrl+A &gt; Apply All Transforms</code> so scales are 1.0 and rotations are applied.</li>
-                <li><strong>Mesh Naming:</strong> Use descriptive collection/mesh prefixes like <code style={{ color: 'var(--accent-cyan)' }}>Terrain_</code>, <code style={{ color: 'var(--accent-cyan)' }}>Hab_</code>, <code style={{ color: 'var(--accent-cyan)' }}>Wall_</code>, <code style={{ color: 'var(--accent-cyan)' }}>Console_</code> for instant automatic categorization.</li>
-                <li><strong>Export Format:</strong> In Blender: <em>File &gt; Export &gt; glTF 2.0 (.glb/.gltf)</em>, Format = <strong>glTF Binary (.glb)</strong>. Check <em>Include &gt; Selected Objects + Custom Properties</em>.</li>
-              </ul>
             </div>
 
-            <div className="blender-card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-emerald)', fontWeight: 600 }}>
-                <FileCode size={16} />
-                <span>Coordinate System Alignment</span>
+            <div className="reference-number-col">
+              <div className="reference-big-stat">60+</div>
+              <div className="reference-dashed-divider" />
+              <div className="reference-stat-title">Target Viewport FPS</div>
+              <div className="reference-stat-desc">
+                Optimized Three.js rendering pipeline with frustum culling, efficient draw calls, and smooth kinematic physics ticks.
               </div>
-              <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-                Three.js and Rapier 3D use a right-handed coordinate system with +Y pointing Up:
-              </p>
-              <div className="code-snippet">
-                +Y: Upwards (Elevation / Height)<br />
-                +X: East / Right<br />
-                +Z: South / Backward (-Z is North / Forward)
+            </div>
+
+            <div className="reference-number-col">
+              <div className="reference-big-stat">100%</div>
+              <div className="reference-dashed-divider" />
+              <div className="reference-stat-title">Local & Private</div>
+              <div className="reference-stat-desc">
+                Proprietary 3D assets, architectural blueprints, and engineering files never touch an external server or cloud bucket.
               </div>
-              <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-                Blender exports automatically transform Blender's +Z Up into Three.js +Y Up when using the standard glTF exporter.
-              </p>
+            </div>
+
+            <div className="reference-number-col">
+              <div className="reference-big-stat">2.0</div>
+              <div className="reference-dashed-divider" />
+              <div className="reference-stat-title">Standard Compliance</div>
+              <div className="reference-stat-desc">
+                Native support for Khronos glTF 2.0 and GLB binary containers, with Draco mesh compression and RGBE 32-bit Radiance HDR.
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Limitations Section */}
-      <section id="limitations" className="limitations-section">
-        <div className="limitations-banner">
-          <AlertTriangle size={24} color="#ff9900" style={{ flexShrink: 0, marginTop: '2px' }} />
-          <div>
-            <div style={{ fontWeight: 600, color: '#ffffff', fontSize: '15px', marginBottom: '4px' }}>
-              Technical Requirements & Browser Boundaries
+      {/* ===================================================================
+          Section 7: Deep Dark Capabilities & Services Section
+          =================================================================== */}
+      <section className="reference-dark-services-section" id="capabilities">
+        <div className="reference-dark-services-inner">
+          <div className="reference-tag-label" style={{ color: 'rgba(255,255,255,0.7)' }}>
+            <span className="tag-square-icon" />
+            <span>CORE CAPABILITIES</span>
+          </div>
+
+          <div className="reference-services-head">
+            <h2 className="reference-services-title">
+              Our
+              <div className="services-badge-icon">
+                <Layers size={22} color="#08090d" />
+              </div>
+              Capabilities
+            </h2>
+            <p className="reference-services-desc">
+              Everything you need to inspect, calibrate, and navigate complex 3D environments without launching Blender or Unreal Engine.
+            </p>
+          </div>
+
+          <div className="reference-services-grid">
+            <div className="reference-service-card">
+              <div className="service-card-top">
+                <span className="service-card-tag">01 // HIERARCHY</span>
+                <h3 className="service-card-title">Scene Graph & Node Inventory</h3>
+                <p className="service-card-desc">
+                  Deeply inspect object hierarchies, bounding dimensions, vertex counts, and material properties across all scene groups.
+                </p>
+              </div>
+              <div className="service-card-bottom">
+                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Interactive Tree</span>
+                <div className="service-plus-btn">+</div>
+              </div>
             </div>
-            <div style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.6' }}>
-              DrThreeD runs 100% client-side in your browser using WebGL 2.0 and WebAssembly (WASM).
-              Large environment files with millions of raw triangles should be optimized in Blender with decimation or LODs before inspection.
-              Multi-file .gltf with external relative URIs require local file bundle packaging; self-contained single-file <strong>.glb</strong> is recommended.
+
+            <div className="reference-service-card">
+              <div className="service-card-top">
+                <span className="service-card-tag">02 // PHYSICS</span>
+                <h3 className="service-card-title">Rapier 3D Kinematic Colliders</h3>
+                <p className="service-card-desc">
+                  Automatically construct exact bounding box or trimesh colliders with configurable safety buffers (+0.25m, +0.5m, +1.0m).
+                </p>
+              </div>
+              <div className="service-card-bottom">
+                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>WASM Simulation</span>
+                <div className="service-plus-btn">+</div>
+              </div>
+            </div>
+
+            <div className="reference-service-card">
+              <div className="service-card-top">
+                <span className="service-card-tag">03 // NAVIGATION</span>
+                <h3 className="service-card-title">Dual-Mode Locomotion</h3>
+                <p className="service-card-desc">
+                  Switch instantly between orbital inspection, Blender-style free-flight, and first-person WASD traversal with 42° slope autostepping.
+                </p>
+              </div>
+              <div className="service-card-bottom">
+                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Orbit / Fly / FPS</span>
+                <div className="service-plus-btn">+</div>
+              </div>
+            </div>
+
+            <div className="reference-service-card">
+              <div className="service-card-top">
+                <span className="service-card-tag">04 // LIGHTING</span>
+                <h3 className="service-card-title">Radiance HDRI Environment</h3>
+                <p className="service-card-desc">
+                  Configure 32-bit Radiance (.hdr) skyboxes, solar altitude, azimuth angles, and ambient exposure in real time.
+                </p>
+              </div>
+              <div className="service-card-bottom">
+                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>RGBE / PMREM</span>
+                <div className="service-plus-btn">+</div>
+              </div>
+            </div>
+
+            <div className="reference-service-card">
+              <div className="service-card-top">
+                <span className="service-card-tag">05 // SPAWN POINT</span>
+                <h3 className="service-card-title">Safe Surface Ground Snapping</h3>
+                <p className="service-card-desc">
+                  Place spawn waypoints directly on any selected node or let physics raycasts automatically calculate safe landing elevation.
+                </p>
+              </div>
+              <div className="service-card-bottom">
+                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>3D Beacon Marker</span>
+                <div className="service-plus-btn">+</div>
+              </div>
+            </div>
+
+            <div className="reference-service-card">
+              <div className="service-card-top">
+                <span className="service-card-tag">06 // COMFORT</span>
+                <h3 className="service-card-title">Accessibility & Comfort</h3>
+                <p className="service-card-desc">
+                  Velocity-driven head bobbing and idle breathing with unrolled stable horizon, plus instant Reduced Motion accessibility mode.
+                </p>
+              </div>
+              <div className="service-card-bottom">
+                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Customizable FOV</span>
+                <div className="service-plus-btn">+</div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Bottom CTA */}
-      <section style={{ padding: '80px 40px', textAlign: 'center', borderTop: '1px solid var(--border-subtle)', background: 'linear-gradient(180deg, #0c1017 0%, #080b0f 100%)' }}>
-        <h2 style={{ fontSize: '32px', fontWeight: 700, color: '#ffffff', marginBottom: '12px' }}>
-          Ready to inspect your 3D environment?
-        </h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '15px', marginBottom: '24px' }}>
-          Test the built-in Mars Research Outpost or drag in your custom Blender creations.
-        </p>
-        <Link to="/inspector" className="cta-button-primary" style={{ padding: '14px 32px', fontSize: '15px' }}>
-          <span>Open Inspector Workspace</span>
-          <ArrowRight size={16} />
-        </Link>
+      {/* ===================================================================
+          Section 8: Technical Requirements & Blender Workflow
+          =================================================================== */}
+      <section className="reference-technical-section" id="blender">
+        <div className="reference-technical-inner">
+          <div className="technical-card">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Terminal size={18} color="#00f0ff" />
+              <h3 className="technical-card-title">Blender Export Manual</h3>
+            </div>
+            <p className="technical-card-text">
+              Follow these standard conventions in Blender for accurate real-world scale and collision fidelity:
+            </p>
+            <ul style={{ paddingLeft: '20px', color: '#8c9eb5', fontSize: '13px', lineHeight: 1.8 }}>
+              <li><strong>Unit Scale:</strong> Metric, Length = Meters (1 Blender Unit = 1.0 Meter).</li>
+              <li><strong>Apply Transforms:</strong> Select objects and press <code style={{ color: '#00f0ff' }}>Ctrl+A &gt; Apply All Transforms</code> so object scales are 1.0.</li>
+              <li><strong>Naming Heuristics:</strong> Use prefixes like <code style={{ color: '#00f0ff' }}>Terrain_</code>, <code style={{ color: '#00f0ff' }}>Hab_</code>, <code style={{ color: '#00f0ff' }}>Wall_</code>, <code style={{ color: '#00f0ff' }}>Console_</code> for instant automatic categorization.</li>
+              <li><strong>Format:</strong> In Blender: <em>File &gt; Export &gt; glTF 2.0 (.glb/.gltf)</em>, Format = <strong>glTF Binary (.glb)</strong>.</li>
+            </ul>
+          </div>
+
+          <div className="technical-card">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <FileCode size={18} color="#00e699" />
+              <h3 className="technical-card-title">Coordinate System Alignment</h3>
+            </div>
+            <p className="technical-card-text">
+              Three.js and Rapier 3D utilize a right-handed coordinate system with +Y pointing Up:
+            </p>
+            <div className="code-box-minimal">
+              +Y : Elevation / Height (Upwards)<br />
+              +X : East / Right<br />
+              +Z : South / Backward (-Z is North / Forward)
+            </div>
+            <p className="technical-card-text">
+              Standard Blender glTF export automatically transforms Blender's +Z Up into Three.js +Y Up. Single-file self-contained <strong>.glb</strong> is recommended for bundled textures and materials.
+            </p>
+          </div>
+        </div>
       </section>
 
-      {/* Footer */}
-      <footer className="home-footer">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Box size={16} color="#00f0ff" />
-          <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>DrThreeD Platform</span>
-          <span>— Browser-Based 3D Environment Inspection & Physics Traversal</span>
+      {/* ===================================================================
+          Section 9: About Project
+          =================================================================== */}
+      <section className="reference-technical-section" id="about" style={{ borderTop: 'none', paddingTop: 0 }}>
+        <div className="reference-technical-inner">
+          <div className="technical-card" style={{ gridColumn: 'span 2' }}>
+            <div className="reference-tag-label" style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '8px' }}>
+              <span className="tag-square-icon" />
+              <span>ABOUT THE PROJECT</span>
+            </div>
+            <h3 style={{ fontSize: '24px', fontWeight: 700, color: '#ffffff' }}>
+              {ABOUT_CONTENT.projectTitle}
+            </h3>
+            <p className="technical-card-text" style={{ fontSize: '14.5px', color: '#cbd5e1' }}>
+              {ABOUT_CONTENT.projectMission}
+            </p>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              <div>
+                <div style={{ color: '#ffffff', fontWeight: 600, fontSize: '14px' }}>{ABOUT_CONTENT.developerName}</div>
+                <div style={{ color: '#00f0ff', fontSize: '12px', fontFamily: 'var(--font-mono)' }}>{ABOUT_CONTENT.developerTitle}</div>
+              </div>
+              <a
+                href={ABOUT_CONTENT.githubRepoUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-pill-outline"
+                style={{ fontSize: '12px', padding: '8px 18px' }}
+              >
+                <span>GitHub Repository</span>
+                <ExternalLink size={13} />
+              </a>
+            </div>
+          </div>
         </div>
-        <div>Built with React, TypeScript, Three.js, and Rapier 3D WASM</div>
+      </section>
+
+      {/* ===================================================================
+          Section 10: Closing CTA
+          =================================================================== */}
+      <section className="reference-closing-section">
+        <div className="reference-closing-inner">
+          <div className="reference-tag-label" style={{ color: 'rgba(255,255,255,0.7)' }}>
+            <span className="tag-square-icon" />
+            <span>INTERACTIVE WORKSPACE</span>
+          </div>
+
+          <h2 className="reference-closing-title">
+            Ready to inspect your 3D environment?
+          </h2>
+
+          <p className="reference-closing-desc">
+            Bring your supported 3D models into an interactive workspace built for inspection, physics verification, and real-time environment traversal.
+          </p>
+
+          <Link to="/inspector" className="btn-pill-accent" style={{ padding: '14px 34px', fontSize: '15px' }}>
+            <span>Open Inspector Workspace</span>
+            <ArrowRight size={17} />
+          </Link>
+        </div>
+      </section>
+
+      {/* ===================================================================
+          Section 11: Minimal Footer
+          =================================================================== */}
+      <footer className="reference-footer">
+        <div className="reference-footer-inner">
+          <Link to="/" style={{ textDecoration: 'none' }}>
+            <DrThreeDLogo showVersion={false} size={22} />
+          </Link>
+
+          <div className="reference-footer-links">
+            <a href="#platform">Platform</a>
+            <a href="#capabilities">Capabilities</a>
+            <a href="#blender">Blender Guide</a>
+            <a href="#about">About</a>
+            <Link to="/inspector" style={{ color: '#00f0ff', fontWeight: 600 }}>
+              Launch Inspector ↗
+            </Link>
+          </div>
+
+          <div style={{ color: '#64748b', fontSize: '12px' }}>
+            DrThreeD Platform · Built with Three.js & Rapier 3D WASM
+          </div>
+        </div>
       </footer>
     </div>
   );

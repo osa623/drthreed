@@ -6,9 +6,15 @@ import type { PhysicsManager } from '../physics/PhysicsManager';
 
 interface TerrainSettingsPanelProps {
   physicsManager: PhysicsManager | null;
+  onSpawnAtNode?: (nodeId: string) => void;
+  onAutoFindSpawn?: () => void;
 }
 
-export const TerrainSettingsPanel: React.FC<TerrainSettingsPanelProps> = ({ physicsManager }) => {
+export const TerrainSettingsPanel: React.FC<TerrainSettingsPanelProps> = ({
+  physicsManager,
+  onSpawnAtNode,
+  onAutoFindSpawn,
+}) => {
   const { playerSettings, spawnPoint, selectedNodeId, nodes } = useEditorStore();
 
   const handleSlopeChange = (angle: number) => {
@@ -24,7 +30,13 @@ export const TerrainSettingsPanel: React.FC<TerrainSettingsPanelProps> = ({ phys
   };
 
   const handlePlaceSpawnAtSelected = () => {
-    if (!selectedNodeId || !physicsManager) return;
+    if (!selectedNodeId) return;
+    if (onSpawnAtNode) {
+      onSpawnAtNode(selectedNodeId);
+      return;
+    }
+
+    if (!physicsManager) return;
     const node = nodes.get(selectedNodeId);
     if (!node) return;
 
@@ -44,6 +56,11 @@ export const TerrainSettingsPanel: React.FC<TerrainSettingsPanelProps> = ({ phys
   };
 
   const handleAutoFindSafeSpawn = () => {
+    if (onAutoFindSpawn) {
+      onAutoFindSpawn();
+      return;
+    }
+
     if (!physicsManager || nodes.size === 0) return;
 
     const bounds = new THREE.Box3();

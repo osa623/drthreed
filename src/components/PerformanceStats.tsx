@@ -12,7 +12,7 @@ export const PerformanceStats: React.FC = () => {
     <div
       style={{
         position: 'absolute',
-        bottom: '12px',
+        top: '12px',
         left: '12px',
         background: 'rgba(16, 21, 30, 0.88)',
         backdropFilter: 'blur(8px)',

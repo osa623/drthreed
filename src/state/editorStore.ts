@@ -197,6 +197,14 @@ class EditorStore {
     this.setState({ errorMessage: msg });
   }
 
+  public setSpawnPoint(spawnPoint: SpawnPointConfig): void {
+    this.setState({ spawnPoint });
+  }
+
+  public updatePlayerLiveState(playerLiveState: PlayerLiveState): void {
+    this.setState({ playerLiveState });
+  }
+
   public setLoading(loading: boolean, message = '', progress = 0): void {
     this.setState({
       isLoading: loading,
