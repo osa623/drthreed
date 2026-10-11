@@ -83,20 +83,34 @@ export const NavigationNavbar: React.FC<NavigationNavbarProps> = ({
           <span>Colliders Wireframe</span>
         </button>
 
+        {/* Blender-Style Free Fly Mode (Shift + ~ / No Gravity) */}
+        <button
+          className={`nav-btn ${viewMode === 'fly' ? 'nav-btn-active' : ''}`}
+          style={viewMode === 'fly' ? { background: '#9d00ff', borderColor: '#d166ff', color: '#fff' } : {}}
+          onClick={() => {
+            const nextMode = viewMode === 'fly' ? 'orbit' : 'fly';
+            editorStore.setViewMode(nextMode);
+          }}
+          title="Blender Fly Mode: Freely float through scene with WASD+Mouse (Press Tab anytime to enable gravity & drop to floor)"
+        >
+          <Sparkles size={14} color={viewMode === 'fly' ? '#ffffff' : '#d166ff'} />
+          <span>Fly Mode (No Gravity / Tab: Drop)</span>
+        </button>
+
         <button
           className={`nav-btn ${viewMode === 'first_person' ? 'nav-btn-active' : 'nav-btn-primary'}`}
           onClick={handleTogglePlay}
-          title={viewMode === 'orbit' ? 'Enter first-person exploration mode' : 'Exit back to inspection mode'}
+          title={viewMode === 'first_person' ? 'Exit back to orbit inspect mode' : 'Enter first-person exploration mode with physics gravity'}
         >
-          {viewMode === 'orbit' ? (
-            <>
-              <Footprints size={14} />
-              <span>Explore Mode (WASD)</span>
-            </>
-          ) : (
+          {viewMode === 'first_person' ? (
             <>
               <Eye size={14} />
               <span>Orbit Inspect (Esc)</span>
+            </>
+          ) : (
+            <>
+              <Footprints size={14} />
+              <span>Explore Mode (WASD)</span>
             </>
           )}
         </button>

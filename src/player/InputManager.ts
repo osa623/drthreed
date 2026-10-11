@@ -6,6 +6,8 @@ export interface InputState {
   jump: boolean;
   sprint: boolean;
   crouch: boolean;
+  up: boolean;
+  down: boolean;
   mouseDeltaX: number;
   mouseDeltaY: number;
 }
@@ -16,14 +18,20 @@ export class InputManager {
   private mouseDeltaY = 0;
   private isPointerLocked = false;
   private onLockChangeCallback?: (locked: boolean) => void;
+  private onTabPressedCallback?: () => void;
 
   private boundKeyDown = this.handleKeyDown.bind(this);
   private boundKeyUp = this.handleKeyUp.bind(this);
   private boundMouseMove = this.handleMouseMove.bind(this);
   private boundPointerLockChange = this.handlePointerLockChange.bind(this);
 
-  public init(targetElement: HTMLElement, onLockChange?: (locked: boolean) => void): void {
+  public init(
+    targetElement: HTMLElement,
+    onLockChange?: (locked: boolean) => void,
+    onTabPressed?: () => void
+  ): void {
     this.onLockChangeCallback = onLockChange;
+    this.onTabPressedCallback = onTabPressed;
     window.addEventListener('keydown', this.boundKeyDown);
     window.addEventListener('keyup', this.boundKeyUp);
     targetElement.addEventListener('mousemove', this.boundMouseMove);
@@ -53,6 +61,8 @@ export class InputManager {
       jump: this.keys.has('Space'),
       sprint: this.keys.has('ShiftLeft') || this.keys.has('ShiftRight'),
       crouch: this.keys.has('KeyC') || this.keys.has('ControlLeft'),
+      up: this.keys.has('KeyE') || this.keys.has('Space'),
+      down: this.keys.has('KeyQ') || this.keys.has('KeyC'),
       mouseDeltaX: this.mouseDeltaX,
       mouseDeltaY: this.mouseDeltaY,
     };
@@ -70,6 +80,15 @@ export class InputManager {
     if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT')) {
       return;
     }
+
+    if (e.code === 'Tab') {
+      e.preventDefault();
+      if (this.onTabPressedCallback) {
+        this.onTabPressedCallback();
+      }
+      return;
+    }
+
     this.keys.add(e.code);
   }
 

@@ -1,10 +1,10 @@
 import React from 'react';
-import { Eye, EyeOff, Search, ChevronRight, Box } from 'lucide-react';
+import { Eye, EyeOff, Search, ChevronRight, Box, MapPin } from 'lucide-react';
 import { useEditorStore, editorStore } from '../state/editorStore';
 import type { AnalyzedNode, ObjectCategory } from '../state/types';
 
 export const ObjectHierarchy: React.FC = () => {
-  const { nodes, selectedNodeId, searchQuery, categoryFilter } = useEditorStore();
+  const { nodes, selectedNodeId, searchQuery, categoryFilter, spawnPoint } = useEditorStore();
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     editorStore.setSearchQuery(e.target.value);
@@ -33,6 +33,24 @@ export const ObjectHierarchy: React.FC = () => {
     editorStore.selectNode(node.id);
   };
 
+  const handleSpawnOnNode = (e: React.MouseEvent, node: AnalyzedNode) => {
+    e.stopPropagation();
+    editorStore.selectNode(node.id);
+    // Position player safely on top of the chosen object
+    const [cx, , cz] = node.center;
+    const topY = parseFloat((node.worldBoundingBox.max[1] + 1.0).toFixed(2));
+
+    editorStore.setState({
+      spawnPoint: {
+        position: [cx, topY, cz],
+        rotationY: 0,
+        eyeHeight: 1.65,
+        isValidated: true,
+        groundHeightFound: topY,
+      },
+    });
+  };
+
   const handleShowAll = () => {
     nodes.forEach((n) => editorStore.setNodeVisibility(n.id, true));
   };
@@ -40,6 +58,8 @@ export const ObjectHierarchy: React.FC = () => {
   const handleHideAll = () => {
     nodes.forEach((n) => editorStore.setNodeVisibility(n.id, false));
   };
+
+  const selectedNode = selectedNodeId ? nodes.get(selectedNodeId) : null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', height: '100%' }}>
@@ -84,8 +104,38 @@ export const ObjectHierarchy: React.FC = () => {
         </div>
       </div>
 
+      {/* Selected Object Quick Spawn Action Banner */}
+      {selectedNode && (
+        <div style={{
+          background: 'rgba(0, 240, 255, 0.08)',
+          border: '1px solid rgba(0, 240, 255, 0.3)',
+          borderRadius: 'var(--radius-sm)',
+          padding: '8px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-dim)' }}>SELECTED OBJECT</span>
+            <span style={{ fontSize: '11px', color: 'var(--accent-cyan)', fontWeight: 600 }}>{selectedNode.name}</span>
+          </div>
+          <button
+            className="nav-btn-primary"
+            style={{ width: '100%', justifyContent: 'center', fontSize: '11px', padding: '5px' }}
+            onClick={(e) => handleSpawnOnNode(e, selectedNode)}
+            title="Set player spawn point on top of this object"
+          >
+            <MapPin size={13} />
+            <span>Spawn Player On This Object</span>
+          </button>
+        </div>
+      )}
+
       <div style={{ fontSize: '11px', color: 'var(--text-dim)', display: 'flex', justifyContent: 'space-between' }}>
         <span>OBJECTS ({nodeList.length} of {nodes.size})</span>
+        <span style={{ color: 'var(--accent-cyan)', fontSize: '10px' }}>
+          Spawn: ({spawnPoint.position[0].toFixed(1)}, {spawnPoint.position[1].toFixed(1)}, {spawnPoint.position[2].toFixed(1)})
+        </span>
       </div>
 
       {/* Node List */}
@@ -120,6 +170,23 @@ export const ObjectHierarchy: React.FC = () => {
                 <span className={`category-badge cat-${node.category}`} style={{ fontSize: '9px', padding: '1px 4px' }}>
                   {node.category}
                 </span>
+
+                <button
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: '2px 4px',
+                    cursor: 'pointer',
+                    color: 'var(--accent-cyan)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '2px',
+                  }}
+                  onClick={(e) => handleSpawnOnNode(e, node)}
+                  title={`Spawn player directly on ${node.name}`}
+                >
+                  <MapPin size={12} />
+                </button>
 
                 <ChevronRight size={12} color="var(--text-dim)" />
               </div>

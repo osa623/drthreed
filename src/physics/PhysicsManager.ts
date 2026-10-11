@@ -163,22 +163,23 @@ export class PhysicsManager {
     this.characterController.setMaxSlopeClimbAngle(maxSlopeRad);
     this.characterController.setMinSlopeSlideAngle(maxSlopeRad);
 
-    // Configure autostepping with small 5cm minStepWidth to smoothly step over floor edges and curbs
+    // Configure autostepping with 5cm minStepWidth to smoothly step over floor edges and curbs
     this.characterController.enableAutostep(
       motionSettings.maxStepHeight,
       0.05,
       false
     );
 
-    // Snap to ground to ensure smooth steps
-    this.characterController.enableSnapToGround(0.3);
+    // Disable snapToGround to prevent pulling players into floor mesh triangles
+    // Smooth sliding is handled by normal capsule collision & gravity
   }
 
   /**
    * Updates player position using Rapier kinematic character controller
    */
   public movePlayer(
-    desiredMovement: THREE.Vector3
+    desiredMovement: THREE.Vector3,
+    maxSlopeAngle: number = 45
   ): {
     newPosition: THREE.Vector3;
     isGrounded: boolean;
@@ -233,8 +234,8 @@ export class PhysicsManager {
       this.world,
       this.rapierInstance,
       bottomOrigin,
-      this.capsuleRadius + 0.25,
-      45,
+      this.capsuleRadius + 0.15,
+      maxSlopeAngle,
       this.playerCollider.handle
     );
 

@@ -116,4 +116,4 @@ export interface PlayerLiveState {
   isAirborne: boolean;
 }
 
-export type ViewportViewMode = 'orbit' | 'first_person';
+export type ViewportViewMode = 'orbit' | 'first_person' | 'fly';

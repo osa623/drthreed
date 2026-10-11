@@ -75,9 +75,36 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({ onEngineReady }) =
 
       // Init Rapier 3D WASM
       physicsMgr.init().then(() => {
-        playerCtrl.init(container, (isLocked) => {
-          setIsPointerLocked(isLocked);
-        });
+        playerCtrl.init(
+          container,
+          (isLocked) => {
+            setIsPointerLocked(isLocked);
+          },
+          (playerPos) => {
+            // Tab was pressed: Toggle gravity! If we were in fly mode, switch to grounded explore mode
+            const currentMode = editorStore.getState().viewMode;
+            if (currentMode === 'fly') {
+              // Locate safe ground underneath current floating position
+              const safeResult = physicsMgr.findSafeSpawn(playerPos[0], playerPos[2]);
+              const targetY = safeResult.found ? safeResult.safeY : playerPos[1];
+              editorStore.setState({
+                viewMode: 'first_person',
+                spawnPoint: {
+                  position: [playerPos[0], targetY, playerPos[2]],
+                  rotationY: playerCtrl['fpCamera']?.getYaw() || 0,
+                  eyeHeight: 1.65,
+                  isValidated: safeResult.found,
+                  groundHeightFound: targetY,
+                },
+              });
+              playerCtrl.setFlyMode(false);
+            } else if (currentMode === 'first_person') {
+              // Switch back to fly mode
+              editorStore.setState({ viewMode: 'fly' });
+              playerCtrl.setFlyMode(true);
+            }
+          }
+        );
 
         if (onEngineReady) {
           onEngineReady({
@@ -96,7 +123,7 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({ onEngineReady }) =
       renderMgr.startLoop(
         (delta) => {
           const currentMode = editorStore.getState().viewMode;
-          if (currentMode === 'first_person') {
+          if (currentMode === 'first_person' || currentMode === 'fly') {
             const liveState = playerCtrl.update(delta, editorStore.getState().playerSettings);
             editorStore.setState({ playerLiveState: liveState });
           } else {
@@ -132,7 +159,8 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({ onEngineReady }) =
     handleResize();
 
     const onCanvasClick = (e: MouseEvent) => {
-      if (editorStore.getState().viewMode === 'first_person') {
+      const currentMode = editorStore.getState().viewMode;
+      if (currentMode === 'first_person' || currentMode === 'fly') {
         if (!playerCtrl.isPointerLocked()) {
           playerCtrl.requestPointerLock(container);
         }
@@ -171,7 +199,13 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({ onEngineReady }) =
     sceneManagerRef.current.setViewMode(viewMode);
 
     if (viewMode === 'first_person') {
-      // Validate spawn and spawn player
+      playerControllerRef.current.setFlyMode(false);
+      playerControllerRef.current.spawn(spawnPoint);
+      if (containerRef.current) {
+        playerControllerRef.current.requestPointerLock(containerRef.current);
+      }
+    } else if (viewMode === 'fly') {
+      playerControllerRef.current.setFlyMode(true);
       playerControllerRef.current.spawn(spawnPoint);
       if (containerRef.current) {
         playerControllerRef.current.requestPointerLock(containerRef.current);
@@ -213,17 +247,17 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({ onEngineReady }) =
   return (
     <div className="viewport-container" ref={containerRef}>
 
-      {/* First-Person HUD Overlay */}
-      {viewMode === 'first_person' && (
+      {/* First-Person / Fly Mode HUD Overlay */}
+      {(viewMode === 'first_person' || viewMode === 'fly') && (
         <div className="play-hud-overlay">
           {!isPointerLocked ? (
             <div
               className="hud-banner"
               style={{
-                background: 'rgba(0, 240, 255, 0.25)',
-                border: '1px solid var(--accent-cyan)',
+                background: viewMode === 'fly' ? 'rgba(157, 0, 255, 0.35)' : 'rgba(0, 240, 255, 0.25)',
+                border: viewMode === 'fly' ? '1px solid #d166ff' : '1px solid var(--accent-cyan)',
                 cursor: 'pointer',
-                boxShadow: '0 0 15px rgba(0, 240, 255, 0.3)',
+                boxShadow: viewMode === 'fly' ? '0 0 15px rgba(209, 102, 255, 0.4)' : '0 0 15px rgba(0, 240, 255, 0.3)',
               }}
               onClick={() => {
                 if (containerRef.current && playerControllerRef.current) {
@@ -232,16 +266,24 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({ onEngineReady }) =
               }}
             >
               <span style={{ color: '#fff', fontWeight: 700 }}>
-                👉 CLICK VIEWPORT TO CAPTURE MOUSE & LOOK AROUND (WASD TO WALK)
+                {viewMode === 'fly'
+                  ? '🛸 CLICK VIEWPORT TO CAPTURE MOUSE (WASD/E/Q TO FLY | TAB: ACTIVATE GRAVITY)'
+                  : '👉 CLICK VIEWPORT TO CAPTURE MOUSE & LOOK AROUND (WASD TO WALK | TAB: FLY)'}
               </span>
             </div>
           ) : (
-            <div className="hud-banner">
-              <span style={{ color: 'var(--accent-cyan)', fontWeight: 600 }}>EXPLORATION ACTIVE</span>
+            <div
+              className="hud-banner"
+              style={viewMode === 'fly' ? { borderColor: '#d166ff', background: 'rgba(20, 10, 35, 0.85)' } : {}}
+            >
+              <span style={{ color: viewMode === 'fly' ? '#d166ff' : 'var(--accent-cyan)', fontWeight: 700 }}>
+                {viewMode === 'fly' ? '🛸 BLENDER FREE-FLY MODE (NO GRAVITY)' : 'EXPLORATION ACTIVE (GRAVITY)'}
+              </span>
               <span>WASD: Move</span>
-              <span>Shift: Sprint</span>
-              <span>Space: Jump</span>
-              <span>Esc: Release Mouse / Exit</span>
+              {viewMode === 'fly' && <span>E/Space: Up | Q/C: Down</span>}
+              <span>Shift: Boost Speed</span>
+              <span style={{ color: '#ffea00', fontWeight: 600 }}>[TAB]: {viewMode === 'fly' ? 'DROP / ACTIVATE GRAVITY' : 'SWITCH TO FLY'}</span>
+              <span>Esc: Release Mouse</span>
             </div>
           )}
 

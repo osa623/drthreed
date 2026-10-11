@@ -19,6 +19,7 @@ export class PlayerController {
   private groundSlopeAngle = 0;
   private groundSurfaceName: string | null = null;
 
+  private isFlyMode = false;
   private currentSettings: PlayerMotionSettings;
 
   constructor(
@@ -34,8 +35,23 @@ export class PlayerController {
     this.motion = new FirstPersonMotion();
   }
 
-  public init(container: HTMLElement, onLockChange?: (locked: boolean) => void): void {
-    this.inputManager.init(container, onLockChange);
+  public init(
+    container: HTMLElement,
+    onLockChange?: (locked: boolean) => void,
+    onToggleGravity?: (playerPos: [number, number, number]) => void
+  ): void {
+    this.inputManager.init(
+      container,
+      onLockChange,
+      () => {
+        // Tab key toggles between Fly Mode and Grounded Physics Mode!
+        this.toggleFlyMode();
+        if (onToggleGravity) {
+          const pos = this.getPosition();
+          onToggleGravity(pos);
+        }
+      }
+    );
   }
 
   public requestPointerLock(container: HTMLElement): void {
@@ -48,6 +64,29 @@ export class PlayerController {
 
   public isPointerLocked(): boolean {
     return this.inputManager.getPointerLocked();
+  }
+
+  public setFlyMode(enabled: boolean): void {
+    this.isFlyMode = enabled;
+    if (enabled) {
+      this.verticalVelocity = 0;
+      this.isGrounded = false;
+    }
+  }
+
+  public getIsFlyMode(): boolean {
+    return this.isFlyMode;
+  }
+
+  public toggleFlyMode(): boolean {
+    this.setFlyMode(!this.isFlyMode);
+    return this.isFlyMode;
+  }
+
+  public getPosition(): [number, number, number] {
+    const p = this.physicsManager.getPlayerPosition();
+    if (p) return [p.x, p.y, p.z];
+    return [0, 1.5, 0];
   }
 
   public spawn(spawnConfig: SpawnPointConfig): void {
@@ -72,7 +111,60 @@ export class PlayerController {
       );
     }
 
-    // 2. Compute Desired Horizontal Movement Direction
+    // ----------------------------------------------------
+    // BLENDER FREE-FLY MODE (No Gravity, 6DOF Flight)
+    // ----------------------------------------------------
+    if (this.isFlyMode) {
+      const lookDir = this.fpCamera.getLookDirection();
+      const right = this.fpCamera.getRightVector();
+      const flyMove = new THREE.Vector3();
+
+      if (input.forward) flyMove.add(lookDir);
+      if (input.backward) flyMove.sub(lookDir);
+      if (input.right) flyMove.add(right);
+      if (input.left) flyMove.sub(right);
+      if (input.up) flyMove.y += 1.0;
+      if (input.down) flyMove.y -= 1.0;
+
+      if (flyMove.lengthSq() > 0.001) {
+        flyMove.normalize();
+      }
+
+      const flySpeed = (input.sprint ? settings.runSpeed * 1.8 : settings.walkSpeed * 1.5);
+      const targetFlyVel = flyMove.multiplyScalar(flySpeed);
+
+      this.velocity.x = THREE.MathUtils.damp(this.velocity.x, targetFlyVel.x, 8.0, deltaTime);
+      this.velocity.y = THREE.MathUtils.damp(this.velocity.y, targetFlyVel.y, 8.0, deltaTime);
+      this.velocity.z = THREE.MathUtils.damp(this.velocity.z, targetFlyVel.z, 8.0, deltaTime);
+
+      const currentPos = this.physicsManager.getPlayerPosition() || new THREE.Vector3(0, 5, 0);
+      const nextPos: [number, number, number] = [
+        currentPos.x + this.velocity.x * deltaTime,
+        currentPos.y + this.velocity.y * deltaTime,
+        currentPos.z + this.velocity.z * deltaTime,
+      ];
+
+      this.physicsManager.setPlayerPosition(nextPos);
+
+      const eyeHeight = nextPos[1] + this.physicsManager.eyeOffsetFromCenter;
+      const headPos = new THREE.Vector3(nextPos[0], eyeHeight, nextPos[2]);
+      this.fpCamera.updateCameraTransform(headPos, new THREE.Vector3());
+
+      const speedMag = this.velocity.length();
+      return {
+        isGrounded: false,
+        currentSpeed: speedMag,
+        position: nextPos,
+        velocity: [this.velocity.x, this.velocity.y, this.velocity.z],
+        groundSlopeAngle: 0,
+        groundSurfaceName: 'FREE FLY (NO GRAVITY)',
+        isAirborne: true,
+      };
+    }
+
+    // ----------------------------------------------------
+    // GROUNDED PHYSICS MODE (Rapier Kinematics + Gravity)
+    // ----------------------------------------------------
     const forward = this.fpCamera.getForwardVector();
     const right = this.fpCamera.getRightVector();
     const moveDir = new THREE.Vector3();
@@ -86,42 +178,38 @@ export class PlayerController {
       moveDir.normalize();
     }
 
-    // 3. Target Speed & Acceleration
+    // Target Speed & Acceleration
     const targetSpeed = input.sprint ? settings.runSpeed : settings.walkSpeed;
     const desiredHorizontalVel = moveDir.multiplyScalar(moveDir.length() > 0 ? targetSpeed : 0);
 
-    // Smooth horizontal acceleration/deceleration
     const accelRate = this.isGrounded ? 15.0 : 4.0;
     this.velocity.x = THREE.MathUtils.damp(this.velocity.x, desiredHorizontalVel.x, accelRate, deltaTime);
     this.velocity.z = THREE.MathUtils.damp(this.velocity.z, desiredHorizontalVel.z, accelRate, deltaTime);
 
     this.currentSpeed = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.z * this.velocity.z);
 
-    // 4. Vertical Dynamics (Gravity & Jump)
+    // Vertical Dynamics (Gravity & Jump)
     if (this.isGrounded) {
       if (input.jump && this.groundSlopeAngle <= settings.maxSlopeAngle) {
         this.verticalVelocity = settings.jumpForce;
         this.isGrounded = false;
       } else {
-        // When grounded, zero downward force; Rapier's snap-to-ground handles smooth slope adherence
         this.verticalVelocity = 0;
       }
     } else {
-      // Apply gravity in freefall
       this.verticalVelocity -= settings.gravity * deltaTime;
-      // Clamp terminal velocity
       this.verticalVelocity = Math.max(-30.0, this.verticalVelocity);
     }
 
-    // 5. Total Desired Translation for Rapier Character Controller
+    // Desired Translation
     const totalMovement = new THREE.Vector3(
       this.velocity.x * deltaTime,
       this.verticalVelocity * deltaTime,
       this.velocity.z * deltaTime
     );
 
-    // 6. Step physics with Rapier Character Controller
-    const physicsResult = this.physicsManager.movePlayer(totalMovement);
+    // Step physics with Rapier
+    const physicsResult = this.physicsManager.movePlayer(totalMovement, settings.maxSlopeAngle);
     this.isGrounded = physicsResult.isGrounded;
     this.groundSlopeAngle = physicsResult.groundInfo.slopeDegrees;
 
@@ -129,7 +217,7 @@ export class PlayerController {
       this.verticalVelocity = 0;
     }
 
-    // 7. Calculate Camera Transform with Breathing & Headbob
+    // Camera Transform with subtle breathing & headbob
     const playerPos = physicsResult.newPosition;
     const eyeHeight = playerPos.y + this.physicsManager.eyeOffsetFromCenter;
     const headPos = new THREE.Vector3(playerPos.x, eyeHeight, playerPos.z);

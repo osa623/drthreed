@@ -41,6 +41,15 @@ export class FirstPersonCamera {
     return new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw)).normalize();
   }
 
+  /**
+   * 3D Forward direction vector for true flying (includes pitch)
+   */
+  public getLookDirection(): THREE.Vector3 {
+    const dir = new THREE.Vector3();
+    this.camera.getWorldDirection(dir);
+    return dir;
+  }
+
   public updateCameraTransform(playerHeadPosition: THREE.Vector3, motionOffset: THREE.Vector3): void {
     // 1. Position camera at player head/eye position + motion offset
     this.camera.position.copy(playerHeadPosition);
