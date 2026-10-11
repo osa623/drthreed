@@ -63,7 +63,7 @@ export const NavigationNavbar: React.FC<NavigationNavbarProps> = ({
         {/* Left: Brand, Home Link & Active Model Pill */}
         <div className="inspector-nav-left">
           <Link to="/" style={{ textDecoration: 'none' }} title="DrThreeD Platform">
-            <DrThreeDLogo size={24} showVersion={false} />
+            <DrThreeDLogo size={28} showWordmark={true} />
           </Link>
 
           <span className="nav-divider" />
@@ -99,7 +99,7 @@ export const NavigationNavbar: React.FC<NavigationNavbarProps> = ({
             type="button"
             className={`mode-pill-btn ${viewMode === 'fly' ? 'active fly-active' : ''}`}
             onClick={handleToggleFly}
-            title="Blender Free-Fly: Float freely through scene with WASD & Mouse (Tab: Drop to ground)"
+            title="Free-Fly: Float freely through scene with WASD & Mouse (Tab: Drop to ground)"
             aria-pressed={viewMode === 'fly'}
           >
             <Sparkles size={13} />
@@ -127,10 +127,10 @@ export const NavigationNavbar: React.FC<NavigationNavbarProps> = ({
             type="button"
             className="inspector-action-btn sample-btn"
             onClick={onLoadSample}
-            title="Load Mars Research Outpost Alpha preset scene"
+            title="Load Sample 3D Model preset scene"
           >
             <Sparkles size={13} color="var(--accent-amber)" />
-            <span>Mars Outpost</span>
+            <span>Sample 3D Model</span>
           </button>
 
           <button
@@ -237,7 +237,7 @@ export const NavigationNavbar: React.FC<NavigationNavbarProps> = ({
             >
               <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Sparkles size={16} color="var(--accent-amber)" />
-                <span>Load Mars Outpost Preset</span>
+                <span>Load Sample 3D Model Preset</span>
               </span>
               <span style={{ fontSize: '11px', color: 'var(--accent-amber)' }}>Sample</span>
             </button>

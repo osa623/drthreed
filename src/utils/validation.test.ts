@@ -4,7 +4,7 @@ import { validateGLBFile, validateHDRFile, validateSpawnHeight } from './validat
 
 describe('Validation Utilities', () => {
   it('validates GLB file extensions correctly', () => {
-    const validFile = new File(['mock content'], 'mars_outpost.glb', { type: 'model/gltf-binary' });
+    const validFile = new File(['mock content'], 'sample_3d_model.glb', { type: 'model/gltf-binary' });
     expect(validateGLBFile(validFile).valid).toBe(true);
 
     const validGltf = new File(['mock content'], 'structure.gltf', { type: 'model/gltf+json' });

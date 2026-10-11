@@ -1,104 +1,86 @@
 import React from 'react';
-import { SITE_BRAND } from '../../config/siteContent';
+import logoPng from './DrThreeDLogo.png';
+import { Scale } from 'lucide-react';
 
-interface DrThreeDLogoProps {
+export interface DrThreeDLogoProps {
   size?: number;
   showWordmark?: boolean;
   showVersion?: boolean;
   className?: string;
-  customLogoUrl?: string; // If user provides an image URL in the future
+  marginTop?: number;
+  scale?: number;
 }
 
-/**
- * Replaceable DrThreeD Logo Component
- * 
- * To replace the logo:
- * 1. You can pass a `customLogoUrl` prop pointing to your logo image, OR
- * 2. Replace the SVG below with your custom brand SVG.
- */
 export const DrThreeDLogo: React.FC<DrThreeDLogoProps> = ({
-  size = 28,
+  size = 36,
   showWordmark = true,
   showVersion = false,
   className = '',
-  customLogoUrl,
+  marginTop = 0,
+  scale,
 }) => {
   return (
-    <div className={`drthreed-logo-container ${className}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
-      {customLogoUrl ? (
-        <img
-          src={customLogoUrl}
-          alt={SITE_BRAND.name}
-          style={{ width: size, height: size, objectFit: 'contain' }}
-        />
-      ) : (
-        /* Default Art-Directed DrThreeD Geometric 3D Spatial Glyph */
-        <div
-          className="logo-mark"
+    <div
+      className={`drthreed-brand-wrap ${className}`}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '10px',
+        userSelect: 'none',
+        verticalAlign: 'middle',
+      }}
+    >
+      <img
+        src={logoPng}
+        alt="DrThreeD Logo"
+        style={{
+          width: size,
+          height: size,
+          marginTop: marginTop,
+          scale: scale || 1,
+          objectFit: 'contain',
+          borderRadius: Math.round(size * 0.100),
+          filter: 'drop-shadow(0 2px 8px rgba(0, 240, 255, 0.22))',
+          display: 'block',
+          flexShrink: 0,
+        }}
+      />
+      {showWordmark && (
+        <span
+          className="brand-wordmark"
           style={{
-            width: size,
-            height: size,
-            display: 'flex',
+            fontWeight: 700,
+            fontSize: Math.max(15, Math.round(size * 0.5)),
+            letterSpacing: '-0.4px',
+            color: 'var(--text-main)',
+            lineHeight: 1,
+            display: 'inline-flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            position: 'relative',
-            flexShrink: 0,
+            gap: '6px',
           }}
         >
-          <svg
-            width={size}
-            height={size}
-            viewBox="0 0 32 32"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            {/* Outer Hexagonal 3D Isometric Cube Projection */}
-            <path
-              d="M16 2L29 9.5V22.5L16 30L3 22.5V9.5L16 2Z"
-              stroke="var(--accent-cyan)"
-              strokeWidth="1.8"
-              strokeLinejoin="round"
-            />
-            {/* Top Plane */}
-            <path
-              d="M16 2L29 9.5L16 17L3 9.5L16 2Z"
-              fill="var(--accent-cyan)"
-              fillOpacity="0.12"
-            />
-            {/* Internal 3D Edges */}
-            <path
-              d="M16 17V30"
-              stroke="var(--accent-cyan)"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-            />
-            <path
-              d="M3 9.5L16 17L29 9.5"
-              stroke="var(--accent-cyan)"
-              strokeWidth="1.8"
-              strokeLinejoin="round"
-            />
-            {/* Central Spatial Focal Node */}
-            <circle cx="16" cy="17" r="2.2" fill="#00f0ff" />
-            <circle cx="16" cy="2" r="1.5" fill="var(--accent-emerald)" />
-            <circle cx="29" cy="9.5" r="1.5" fill="var(--accent-cyan)" />
-            <circle cx="3" cy="9.5" r="1.5" fill="var(--accent-cyan)" />
-          </svg>
-        </div>
-      )}
-
-      {showWordmark && (
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-          <span className="brand-wordmark">
-            {SITE_BRAND.wordmark}
-          </span>
+          <span>DrThreeD</span>
           {showVersion && (
-            <span className="brand-version-badge">
-              {SITE_BRAND.releaseTag}
+            <span
+              className="brand-version-badge"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '10px',
+                padding: '2px 6px',
+                borderRadius: '9999px',
+                backgroundColor: 'var(--accent-cyan-dim)',
+                color: 'var(--accent-cyan)',
+                border: '1px solid var(--border-subtle)',
+                fontWeight: 600,
+              }}
+            >
+              v1.0
             </span>
           )}
-        </div>
+        </span>
       )}
     </div>
   );
 };
+
+export default DrThreeDLogo;

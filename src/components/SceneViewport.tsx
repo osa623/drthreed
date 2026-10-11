@@ -327,12 +327,12 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({ onEngineReady, onL
             Bring your 3D world into view
           </h2>
           <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '420px', textAlign: 'center', lineHeight: 1.6 }}>
-            Drop a supported .glb or .gltf file anywhere in the workspace to begin inspecting, or load the built-in Mars Research Outpost environment.
+            Drop a supported .glb or .gltf file anywhere in the workspace to begin inspecting, or load the built-in Sample 3D Model environment.
           </p>
           {onLoadSample && (
             <button type="button" className="btn-primary-pill" onClick={onLoadSample} style={{ marginTop: '12px' }}>
               <Sparkles size={15} />
-              <span>Load Mars Outpost Sample</span>
+              <span>Load Sample 3D Model</span>
             </button>
           )}
         </div>
@@ -368,7 +368,7 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({ onEngineReady, onL
               style={viewMode === 'fly' ? { borderColor: '#d166ff', background: 'rgba(20, 10, 35, 0.85)' } : {}}
             >
               <span style={{ color: viewMode === 'fly' ? '#d166ff' : 'var(--accent-cyan)', fontWeight: 700 }}>
-                {viewMode === 'fly' ? '🛸 BLENDER FREE-FLY MODE (NO GRAVITY)' : 'EXPLORATION ACTIVE (GRAVITY)'}
+                {viewMode === 'fly' ? '🛸 FREE-FLY MODE (NO GRAVITY)' : 'EXPLORATION ACTIVE (GRAVITY)'}
               </span>
               <span>WASD: Move</span>
               {viewMode === 'fly' && <span>E/Space: Up | Q/C: Down</span>}

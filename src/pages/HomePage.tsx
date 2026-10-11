@@ -21,6 +21,53 @@ export const HomePage: React.FC = () => {
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const [webGLError, setWebGLError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [activeSection, setActiveSection] = useState<'home' | 'platform' | 'capabilities' | 'blender' | 'about'>('home');
+
+  // Track scroll position to update sticky navbar and active section
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 25);
+
+      const sectionElements = [
+        { id: 'about' as const, el: document.getElementById('about') },
+        { id: 'blender' as const, el: document.getElementById('blender') },
+        { id: 'capabilities' as const, el: document.getElementById('capabilities') },
+        { id: 'platform' as const, el: document.getElementById('platform') },
+      ];
+
+      const scrollY = window.scrollY + 160;
+      let current: 'home' | 'platform' | 'capabilities' | 'blender' | 'about' = 'home';
+
+      for (const sec of sectionElements) {
+        if (sec.el && sec.el.offsetTop <= scrollY) {
+          current = sec.id;
+          break;
+        }
+      }
+      setActiveSection(current);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToSection = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    if (id === 'home') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setActiveSection('home');
+      setMobileMenuOpen(false);
+      return;
+    }
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+      setActiveSection(id as any);
+      setMobileMenuOpen(false);
+    }
+  };
 
   // Lock background scroll when mobile menu is open
   useEffect(() => {
@@ -179,25 +226,50 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="home-page">
-      {/* ===================================================================
-          Section 1 & 2: Top Dark Hero Section (With Integrated Header)
-          Directly matching Image 2 composition & layout
-          =================================================================== */}
-      <div className="reference-hero-container" ref={previewContainerRef}>
-        {/* Integrated Navigation Header */}
+      {/* Sticky Theme-Aware Navigation Header */}
+      <div className={`reference-header-wrapper ${isScrolled ? 'is-scrolled' : ''}`}>
         <header className="reference-header">
-          <Link to="/" style={{ textDecoration: 'none' }} title="DrThreeD Platform">
-            <DrThreeDLogo showVersion={false} size={28} />
+          <Link to="/" style={{ textDecoration: 'none' }} title="DrThreeD Platform" onClick={(e) => scrollToSection(e, 'home')}>
+            <DrThreeDLogo size={36} showWordmark={true} />
           </Link>
 
           <nav className="reference-nav-links" aria-label="Main Navigation">
-            <Link to="/" className="reference-nav-item">Home</Link>
-            <a href="#platform" className="reference-nav-item">Platform</a>
-            <a href="#capabilities" className="reference-nav-item">
-              Features <span className="reference-badge-pill">v1</span>
+            <a
+              href="#"
+              onClick={(e) => scrollToSection(e, 'home')}
+              className={`reference-nav-item ${activeSection === 'home' ? 'active' : ''}`}
+            >
+              <span>Home</span>
             </a>
-            <a href="#blender" className="reference-nav-item">Manual</a>
-            <a href="#about" className="reference-nav-item">About</a>
+            <a
+              href="#platform"
+              onClick={(e) => scrollToSection(e, 'platform')}
+              className={`reference-nav-item ${activeSection === 'platform' ? 'active' : ''}`}
+            >
+              <span>Platform</span>
+            </a>
+            <a
+              href="#capabilities"
+              onClick={(e) => scrollToSection(e, 'capabilities')}
+              className={`reference-nav-item ${activeSection === 'capabilities' ? 'active' : ''}`}
+            >
+              <span>Features</span>
+              <span className="reference-badge-pill">v1</span>
+            </a>
+            <a
+              href="#blender"
+              onClick={(e) => scrollToSection(e, 'blender')}
+              className={`reference-nav-item ${activeSection === 'blender' ? 'active' : ''}`}
+            >
+              <span>Manual</span>
+            </a>
+            <a
+              href="#about"
+              onClick={(e) => scrollToSection(e, 'about')}
+              className={`reference-nav-item ${activeSection === 'about' ? 'active' : ''}`}
+            >
+              <span>About</span>
+            </a>
             <ThemeToggle />
           </nav>
 
@@ -220,85 +292,108 @@ export const HomePage: React.FC = () => {
             </button>
           </div>
         </header>
+      </div>
 
-        {/* Mobile Navigation Drawer with Backdrop */}
-        {mobileMenuOpen && (
-          <>
-            <div
-              className="mobile-nav-drawer-backdrop"
-              onClick={() => setMobileMenuOpen(false)}
-              aria-hidden="true"
-            />
-            <div className="mobile-nav-drawer" role="dialog" aria-modal="true" aria-label="Mobile Navigation">
-              <div className="mobile-drawer-header">
-                <Link to="/" onClick={() => setMobileMenuOpen(false)}>
-                  <DrThreeDLogo showVersion={false} size={26} />
-                </Link>
-                <button
-                  type="button"
-                  className="mobile-drawer-close-btn"
-                  onClick={() => setMobileMenuOpen(false)}
-                  aria-label="Close navigation"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="mobile-drawer-links">
-                <Link to="/" className="mobile-drawer-link" onClick={() => setMobileMenuOpen(false)}>
-                  <span>Home</span>
-                  <ArrowRight size={14} style={{ opacity: 0.5 }} />
-                </Link>
-                <a href="#platform" className="mobile-drawer-link" onClick={() => setMobileMenuOpen(false)}>
-                  <span>Platform Architecture</span>
-                  <ArrowRight size={14} style={{ opacity: 0.5 }} />
-                </a>
-                <a href="#capabilities" className="mobile-drawer-link" onClick={() => setMobileMenuOpen(false)}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    Capabilities
-                    <span className="reference-badge-pill">v1</span>
-                  </span>
-                  <ArrowRight size={14} style={{ opacity: 0.5 }} />
-                </a>
-                <a href="#blender" className="mobile-drawer-link" onClick={() => setMobileMenuOpen(false)}>
-                  <span>Blender Export Guide</span>
-                  <ArrowRight size={14} style={{ opacity: 0.5 }} />
-                </a>
-                <a href="#about" className="mobile-drawer-link" onClick={() => setMobileMenuOpen(false)}>
-                  <span>About Project</span>
-                  <ArrowRight size={14} style={{ opacity: 0.5 }} />
-                </a>
-              </div>
-
-              <div className="mobile-drawer-footer">
-                <div className="mobile-drawer-footer-row">
-                  <span>Interface Theme</span>
-                  <ThemeToggle />
-                </div>
-                <Link
-                  to="/inspector"
-                  className="btn-pill-accent"
-                  style={{ justifyContent: 'center', width: '100%', padding: '13px 20px', fontSize: '14.5px' }}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <span>Open 3D Inspector Workspace</span>
-                  <ArrowUpRight size={16} />
-                </Link>
-              </div>
+      {/* Mobile Navigation Drawer with Backdrop */}
+      {mobileMenuOpen && (
+        <>
+          <div
+            className="mobile-nav-drawer-backdrop"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="mobile-nav-drawer" role="dialog" aria-modal="true" aria-label="Mobile Navigation">
+            <div className="mobile-drawer-header">
+              <Link to="/" onClick={(e) => scrollToSection(e, 'home')}>
+                <DrThreeDLogo size={32} showWordmark={true} />
+              </Link>
+              <button
+                type="button"
+                className="mobile-drawer-close-btn"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-label="Close navigation"
+              >
+                <X size={18} />
+              </button>
             </div>
-          </>
-        )}
 
+            <div className="mobile-drawer-links">
+              <a
+                href="#"
+                className={`mobile-drawer-link ${activeSection === 'home' ? 'active' : ''}`}
+                onClick={(e) => scrollToSection(e, 'home')}
+              >
+                <span>Home</span>
+                <ArrowRight size={14} style={{ opacity: 0.5 }} />
+              </a>
+              <a
+                href="#platform"
+                className={`mobile-drawer-link ${activeSection === 'platform' ? 'active' : ''}`}
+                onClick={(e) => scrollToSection(e, 'platform')}
+              >
+                <span>Platform Architecture</span>
+                <ArrowRight size={14} style={{ opacity: 0.5 }} />
+              </a>
+              <a
+                href="#capabilities"
+                className={`mobile-drawer-link ${activeSection === 'capabilities' ? 'active' : ''}`}
+                onClick={(e) => scrollToSection(e, 'capabilities')}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  Capabilities
+                  <span className="reference-badge-pill">v1</span>
+                </span>
+                <ArrowRight size={14} style={{ opacity: 0.5 }} />
+              </a>
+              <a
+                href="#blender"
+                className={`mobile-drawer-link ${activeSection === 'blender' ? 'active' : ''}`}
+                onClick={(e) => scrollToSection(e, 'blender')}
+              >
+                <span>Blender Export Guide</span>
+                <ArrowRight size={14} style={{ opacity: 0.5 }} />
+              </a>
+              <a
+                href="#about"
+                className={`mobile-drawer-link ${activeSection === 'about' ? 'active' : ''}`}
+                onClick={(e) => scrollToSection(e, 'about')}
+              >
+                <span>About Project</span>
+                <ArrowRight size={14} style={{ opacity: 0.5 }} />
+              </a>
+            </div>
+
+            <div className="mobile-drawer-footer">
+              <div className="mobile-drawer-footer-row">
+                <span>Interface Theme</span>
+                <ThemeToggle />
+              </div>
+              <Link
+                to="/inspector"
+                className="btn-pill-accent"
+                style={{ justifyContent: 'center', width: '100%', padding: '13px 20px', fontSize: '14.5px' }}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <span>Open 3D Inspector Workspace</span>
+                <ArrowUpRight size={16} />
+              </Link>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ===================================================================
+          Section 1 & 2: Top Dark Hero Section (With Integrated Header)
+          Directly matching Image 2 composition & layout
+          =================================================================== */}
+      <div className="reference-hero-container" ref={previewContainerRef}>
         {/* Hero Content Area */}
         <div className="reference-hero-content">
           <div>
-            <div className="reference-tag-label">
-              <span className="tag-square-icon" />
-              <span>3D ENVIRONMENT INSPECTION PLATFORM</span>
-            </div>
+
 
             <h1 className="reference-hero-headline">
-              Next-Gen<br />
+              <DrThreeDLogo size={96} marginTop={-12} scale={1.5} showWordmark={false} />Next-Gen<br />
               Inspection Platform for<br />
               3D Environments.
             </h1>
@@ -444,11 +539,11 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* ===================================================================
-          Section 7: Deep Dark Capabilities & Services Section
+          Section 7: Core Capabilities Section (Light Editorial Aesthetic)
           =================================================================== */}
-      <section className="reference-dark-services-section" id="capabilities">
-        <div className="reference-dark-services-inner">
-          <div className="reference-tag-label" style={{ color: 'rgba(255,255,255,0.7)' }}>
+      <section className="reference-capabilities-section" id="capabilities">
+        <div className="reference-capabilities-inner">
+          <div className="reference-tag-label" style={{ color: '#64748b' }}>
             <span className="tag-square-icon" />
             <span>CORE CAPABILITIES</span>
           </div>
@@ -457,96 +552,102 @@ export const HomePage: React.FC = () => {
             <h2 className="reference-services-title">
               Our
               <div className="services-badge-icon">
-                <Layers size={22} color="#08090d" />
+                 <DrThreeDLogo size={96} showWordmark={false} />
               </div>
               Capabilities
             </h2>
             <p className="reference-services-desc">
-              Everything you need to inspect, calibrate, and navigate complex 3D environments without launching Blender or Unreal Engine.
+              Everything you need to inspect, calibrate, and navigate complex 3D environments without launching Blender or desktop software.
             </p>
           </div>
 
-          <div className="reference-services-grid">
-            <div className="reference-service-card">
-              <div className="service-card-top">
-                <span className="service-card-tag">01 // HIERARCHY</span>
-                <h3 className="service-card-title">Scene Graph & Node Inventory</h3>
-                <p className="service-card-desc">
+          <div className="reference-capabilities-grid">
+            <div className="reference-capability-card">
+              <div className="capability-card-top">
+                <span className="capability-card-tag">01 // HIERARCHY</span>
+                <h3 className="capability-card-title">Scene Graph & Node Inventory</h3>
+                <div className="capability-card-divider" />
+                <p className="capability-card-desc">
                   Deeply inspect object hierarchies, bounding dimensions, vertex counts, and material properties across all scene groups.
                 </p>
               </div>
-              <div className="service-card-bottom">
-                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Interactive Tree</span>
+              <div className="capability-card-bottom">
+                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>Interactive Tree</span>
                 <div className="service-plus-btn">+</div>
               </div>
             </div>
 
-            <div className="reference-service-card">
-              <div className="service-card-top">
-                <span className="service-card-tag">02 // PHYSICS</span>
-                <h3 className="service-card-title">Rapier 3D Kinematic Colliders</h3>
-                <p className="service-card-desc">
+            <div className="reference-capability-card">
+              <div className="capability-card-top">
+                <span className="capability-card-tag">02 // PHYSICS</span>
+                <h3 className="capability-card-title">Rapier 3D Kinematic Colliders</h3>
+                <div className="capability-card-divider" />
+                <p className="capability-card-desc">
                   Automatically construct exact bounding box or trimesh colliders with configurable safety buffers (+0.25m, +0.5m, +1.0m).
                 </p>
               </div>
-              <div className="service-card-bottom">
-                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>WASM Simulation</span>
+              <div className="capability-card-bottom">
+                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>WASM Simulation</span>
                 <div className="service-plus-btn">+</div>
               </div>
             </div>
 
-            <div className="reference-service-card">
-              <div className="service-card-top">
-                <span className="service-card-tag">03 // NAVIGATION</span>
-                <h3 className="service-card-title">Dual-Mode Locomotion</h3>
-                <p className="service-card-desc">
-                  Switch instantly between orbital inspection, Blender-style free-flight, and first-person WASD traversal with 42° slope autostepping.
+            <div className="reference-capability-card">
+              <div className="capability-card-top">
+                <span className="capability-card-tag">03 // NAVIGATION</span>
+                <h3 className="capability-card-title">Dual-Mode Locomotion</h3>
+                <div className="capability-card-divider" />
+                <p className="capability-card-desc">
+                  Switch instantly between orbital inspection, 6DOF free-flight, and first-person WASD traversal with 42° slope autostepping.
                 </p>
               </div>
-              <div className="service-card-bottom">
-                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Orbit / Fly / FPS</span>
+              <div className="capability-card-bottom">
+                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>Orbit / Fly / FPS</span>
                 <div className="service-plus-btn">+</div>
               </div>
             </div>
 
-            <div className="reference-service-card">
-              <div className="service-card-top">
-                <span className="service-card-tag">04 // LIGHTING</span>
-                <h3 className="service-card-title">Radiance HDRI Environment</h3>
-                <p className="service-card-desc">
+            <div className="reference-capability-card">
+              <div className="capability-card-top">
+                <span className="capability-card-tag">04 // LIGHTING</span>
+                <h3 className="capability-card-title">Radiance HDRI Environment</h3>
+                <div className="capability-card-divider" />
+                <p className="capability-card-desc">
                   Configure 32-bit Radiance (.hdr) skyboxes, solar altitude, azimuth angles, and ambient exposure in real time.
                 </p>
               </div>
-              <div className="service-card-bottom">
-                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>RGBE / PMREM</span>
+              <div className="capability-card-bottom">
+                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>RGBE / PMREM</span>
                 <div className="service-plus-btn">+</div>
               </div>
             </div>
 
-            <div className="reference-service-card">
-              <div className="service-card-top">
-                <span className="service-card-tag">05 // SPAWN POINT</span>
-                <h3 className="service-card-title">Safe Surface Ground Snapping</h3>
-                <p className="service-card-desc">
+            <div className="reference-capability-card">
+              <div className="capability-card-top">
+                <span className="capability-card-tag">05 // SPAWN POINT</span>
+                <h3 className="capability-card-title">Safe Surface Ground Snapping</h3>
+                <div className="capability-card-divider" />
+                <p className="capability-card-desc">
                   Place spawn waypoints directly on any selected node or let physics raycasts automatically calculate safe landing elevation.
                 </p>
               </div>
-              <div className="service-card-bottom">
-                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>3D Beacon Marker</span>
+              <div className="capability-card-bottom">
+                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>3D Beacon Marker</span>
                 <div className="service-plus-btn">+</div>
               </div>
             </div>
 
-            <div className="reference-service-card">
-              <div className="service-card-top">
-                <span className="service-card-tag">06 // COMFORT</span>
-                <h3 className="service-card-title">Accessibility & Comfort</h3>
-                <p className="service-card-desc">
+            <div className="reference-capability-card">
+              <div className="capability-card-top">
+                <span className="capability-card-tag">06 // COMFORT</span>
+                <h3 className="capability-card-title">Accessibility & Comfort</h3>
+                <div className="capability-card-divider" />
+                <p className="capability-card-desc">
                   Velocity-driven head bobbing and idle breathing with unrolled stable horizon, plus instant Reduced Motion accessibility mode.
                 </p>
               </div>
-              <div className="service-card-bottom">
-                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Customizable FOV</span>
+              <div className="capability-card-bottom">
+                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>Customizable FOV</span>
                 <div className="service-plus-btn">+</div>
               </div>
             </div>
@@ -557,76 +658,123 @@ export const HomePage: React.FC = () => {
       {/* ===================================================================
           Section 8: Technical Requirements & Blender Workflow
           =================================================================== */}
-      <section className="reference-technical-section" id="blender">
-        <div className="reference-technical-inner">
-          <div className="technical-card">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Terminal size={18} color="#00f0ff" />
-              <h3 className="technical-card-title">Blender Export Manual</h3>
-            </div>
-            <p className="technical-card-text">
-              Follow these standard conventions in Blender for accurate real-world scale and collision fidelity:
-            </p>
-            <ul style={{ paddingLeft: '20px', color: '#8c9eb5', fontSize: '13px', lineHeight: 1.8 }}>
-              <li><strong>Unit Scale:</strong> Metric, Length = Meters (1 Blender Unit = 1.0 Meter).</li>
-              <li><strong>Apply Transforms:</strong> Select objects and press <code style={{ color: '#00f0ff' }}>Ctrl+A &gt; Apply All Transforms</code> so object scales are 1.0.</li>
-              <li><strong>Naming Heuristics:</strong> Use prefixes like <code style={{ color: '#00f0ff' }}>Terrain_</code>, <code style={{ color: '#00f0ff' }}>Hab_</code>, <code style={{ color: '#00f0ff' }}>Wall_</code>, <code style={{ color: '#00f0ff' }}>Console_</code> for instant automatic categorization.</li>
-              <li><strong>Format:</strong> In Blender: <em>File &gt; Export &gt; glTF 2.0 (.glb/.gltf)</em>, Format = <strong>glTF Binary (.glb)</strong>.</li>
-            </ul>
+      <section className="reference-blender-section" id="blender">
+        <div className="reference-blender-inner">
+          <div className="reference-tag-label" style={{ color: '#64748b' }}>
+            <span className="tag-square-icon" />
+            <span>BLENDER WORKFLOW MANUAL</span>
           </div>
 
-          <div className="technical-card">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <FileCode size={18} color="#00e699" />
-              <h3 className="technical-card-title">Coordinate System Alignment</h3>
+          <h2 className="reference-intro-headline" style={{ marginTop: '16px' }}>
+            Standardized conventions for zero-friction 3D export.{' '}
+            <span className="highlight-muted">
+              Ensure real-world scale, automatic object classification, and accurate coordinate alignment before exporting.
+            </span>
+          </h2>
+
+          <div className="reference-blender-grid">
+            <div className="reference-blender-card">
+              <div className="blender-card-head">
+                <Terminal size={20} color="#0284c7" />
+                <h3 className="blender-card-title">Blender Export Recommendations</h3>
+              </div>
+              <div className="capability-card-divider" />
+              <p className="blender-card-text">
+                Follow these standard conventions in Blender for accurate real-world scale and collision fidelity:
+              </p>
+              <ul style={{ paddingLeft: '20px', color: '#64748b', fontSize: '13.5px', lineHeight: 1.85 }}>
+                <li><strong>Unit Scale:</strong> Metric, Length = Meters (1 Blender Unit = 1.0 Meter).</li>
+                <li><strong>Apply Transforms:</strong> Select objects and press <code style={{ color: '#0284c7', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>Ctrl+A &gt; Apply All Transforms</code> so object scales are 1.0.</li>
+                <li><strong>Naming Heuristics:</strong> Use prefixes like <code style={{ color: '#0284c7', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>Terrain_</code>, <code style={{ color: '#0284c7', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>Hab_</code>, <code style={{ color: '#0284c7', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>Wall_</code>, <code style={{ color: '#0284c7', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>Console_</code> for instant automatic categorization.</li>
+                <li><strong>Format:</strong> In Blender: <em>File &gt; Export &gt; glTF 2.0 (.glb/.gltf)</em>, Format = <strong>glTF Binary (.glb)</strong>.</li>
+              </ul>
             </div>
-            <p className="technical-card-text">
-              Three.js and Rapier 3D utilize a right-handed coordinate system with +Y pointing Up:
-            </p>
-            <div className="code-box-minimal">
-              +Y : Elevation / Height (Upwards)<br />
-              +X : East / Right<br />
-              +Z : South / Backward (-Z is North / Forward)
+
+            <div className="reference-blender-card">
+              <div className="blender-card-head">
+                <FileCode size={20} color="#059669" />
+                <h3 className="blender-card-title">Coordinate System Alignment</h3>
+              </div>
+              <div className="capability-card-divider" />
+              <p className="blender-card-text">
+                Three.js and Rapier 3D utilize a right-handed coordinate system with +Y pointing Upwards:
+              </p>
+              <div className="code-box-minimal-light">
+                +Y : Elevation / Height (Upwards)<br />
+                +X : East / Right<br />
+                +Z : South / Backward (-Z is North / Forward)
+              </div>
+              <p className="blender-card-text">
+                Standard Blender glTF export automatically transforms Blender's +Z Up into Three.js +Y Up. Single-file self-contained <strong>.glb</strong> is recommended for bundled textures and materials.
+              </p>
             </div>
-            <p className="technical-card-text">
-              Standard Blender glTF export automatically transforms Blender's +Z Up into Three.js +Y Up. Single-file self-contained <strong>.glb</strong> is recommended for bundled textures and materials.
-            </p>
           </div>
         </div>
       </section>
 
       {/* ===================================================================
-          Section 9: About Project
+          Section 9: About Project Section (Light Editorial Aesthetic)
           =================================================================== */}
-      <section className="reference-technical-section" id="about" style={{ borderTop: 'none', paddingTop: 0 }}>
-        <div className="reference-technical-inner">
-          <div className="technical-card" style={{ gridColumn: 'span 2' }}>
-            <div className="reference-tag-label" style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '8px' }}>
-              <span className="tag-square-icon" />
-              <span>ABOUT THE PROJECT</span>
-            </div>
-            <h3 style={{ fontSize: '24px', fontWeight: 700, color: '#ffffff' }}>
-              {ABOUT_CONTENT.projectTitle}
-            </h3>
-            <p className="technical-card-text" style={{ fontSize: '14.5px', color: '#cbd5e1' }}>
-              {ABOUT_CONTENT.projectMission}
-            </p>
+      <section className="reference-about-section" id="about">
+        <div className="reference-about-inner">
+          <div className="reference-tag-label" style={{ color: '#64748b' }}>
+            <span className="tag-square-icon" />
+            <span>ABOUT THE PROJECT</span>
+          </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-              <div>
-                <div style={{ color: '#ffffff', fontWeight: 600, fontSize: '14px' }}>{ABOUT_CONTENT.developerName}</div>
-                <div style={{ color: '#00f0ff', fontSize: '12px', fontFamily: 'var(--font-mono)' }}>{ABOUT_CONTENT.developerTitle}</div>
+          <h2 className="reference-intro-headline" style={{ marginTop: '16px' }}>
+            Engineered for browser-native 3D spatial computing.<DrThreeDLogo size={96} showWordmark={false} />
+            <span className="highlight-muted">
+              {ABOUT_CONTENT.projectMission}
+            </span>
+          </h2>
+
+          <div className="reference-about-grid">
+            <div className="reference-about-card">
+              <h3 className="about-card-title">Client-Side Architecture & Privacy</h3>
+              <div className="capability-card-divider" />
+              <p className="about-card-text">
+                DrThreeD processes, renders, and simulates 3D environments completely within your browser via WebGL 2.0 and WebAssembly.
+                Your proprietary 3D models, architectural blueprints, and engineering files never touch an external server or cloud bucket.
+              </p>
+              <div className="about-badges-row">
+                <span className="about-badge-item">● 100% Client-Side Private</span>
+                <span className="about-badge-item">● Three.js r186 WebGL 2.0</span>
+                <span className="about-badge-item">● Rapier 3D WASM</span>
+                <span className="about-badge-item">● Khronos glTF 2.0 / GLB</span>
               </div>
-              <a
-                href={ABOUT_CONTENT.githubRepoUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-pill-outline"
-                style={{ fontSize: '12px', padding: '8px 18px' }}
-              >
-                <span>GitHub Repository</span>
-                <ExternalLink size={13} />
-              </a>
+            </div>
+
+            <div className="reference-about-card">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'linear-gradient(135deg, #0f172a, #334155)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00f0ff', fontWeight: 700, fontSize: '16px' }}>
+                  3D
+                </div>
+                <div>
+                  <h3 className="about-card-title" style={{ fontSize: '18px', margin: 0 }}>
+                    {ABOUT_CONTENT.developerName}
+                  </h3>
+                  <div style={{ color: '#0284c7', fontSize: '12px', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                    {ABOUT_CONTENT.developerTitle}
+                  </div>
+                </div>
+              </div>
+              <div className="capability-card-divider" />
+              <p className="about-card-text" style={{ fontSize: '13.5px' }}>
+                {ABOUT_CONTENT.developerBio}
+              </p>
+              <div style={{ marginTop: 'auto', paddingTop: '8px' }}>
+                <a
+                  href={ABOUT_CONTENT.githubRepoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-pill-accent"
+                  style={{ display: 'inline-flex', padding: '10px 22px', fontSize: '13px' }}
+                >
+                  <span>GitHub Repository</span>
+                  <ExternalLink size={13} />
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -662,8 +810,8 @@ export const HomePage: React.FC = () => {
           =================================================================== */}
       <footer className="reference-footer">
         <div className="reference-footer-inner">
-          <Link to="/" style={{ textDecoration: 'none' }}>
-            <DrThreeDLogo showVersion={false} size={22} />
+          <Link to="/" style={{ textDecoration: 'none' }} onClick={(e) => scrollToSection(e, 'home')}>
+            <DrThreeDLogo size={30} showWordmark={true} />
           </Link>
 
           <div className="reference-footer-links">

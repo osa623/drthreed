@@ -73,14 +73,14 @@ export const SHOWCASE_ENVIRONMENTS = [
     stats: 'Floor Area: 412 m² · Double-Skin Shell',
   },
   {
-    id: 'mars-habitat',
-    category: 'Mars Habitat Engineering',
-    tag: 'Extraterrestrial Base',
-    title: 'Off-World Research Outpost Alpha',
+    id: 'sample-3d-model',
+    category: 'Inspection Environment',
+    tag: 'Built-in Preset',
+    title: 'Sample 3D Model Environment',
     description:
-      'Complete modular habitat environment including communications arrays, laboratory consoles, airlocks, and photovoltaic fields.',
+      'Complete modular 3D environment including communications arrays, laboratory consoles, airlocks, and spatial assets.',
     accentColor: '#ff9900',
-    badge: 'OUTPOST-03',
+    badge: 'SAMPLE-3D-03',
     stats: 'Built-in Preset · Rapier Trimesh Colliders',
   },
   {
@@ -109,9 +109,9 @@ export const SHOWCASE_ENVIRONMENTS = [
     id: 'physics-traversal',
     category: 'Physical Traversal',
     tag: 'WASM Kinematics',
-    title: 'First-Person & Blender Free-Fly Navigation',
+    title: 'First-Person & Free-Fly Navigation',
     description:
-      'Switch seamlessly between Orbit inspection, Blender-style free-flight, and physics-driven first-person movement with unrolled horizon stabilization.',
+      'Switch seamlessly between Orbit inspection, 6DOF free-flight, and physics-driven first-person movement with unrolled horizon stabilization.',
     accentColor: '#f43f5e',
     badge: 'WASM-PHYS-06',
     stats: 'Rapier 3D WASM · Autostep 0.35m',

@@ -112,7 +112,7 @@ export class PlayerController {
     }
 
     // ----------------------------------------------------
-    // BLENDER FREE-FLY MODE (No Gravity, 6DOF Flight)
+    // FREE-FLY MODE (No Gravity, 6DOF Flight)
     // ----------------------------------------------------
     if (this.isFlyMode) {
       const lookDir = this.fpCamera.getLookDirection();

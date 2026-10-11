@@ -217,18 +217,52 @@ a {
   border-radius: var(--radius-pill);
   background-color: var(--bg-control);
   border: 1px solid var(--border-medium);
-  color: var(--text-muted);
+  color: var(--text-main);
   transition: all var(--transition-fast);
+  cursor: pointer;
 }
 
 .theme-toggle-btn:hover {
   background-color: var(--bg-control-hover);
   color: var(--accent-cyan);
   border-color: var(--accent-cyan);
+  transform: scale(1.05);
+}
+
+.theme-toggle-btn:active {
+  transform: scale(0.95);
+}
+
+[data-theme="dark"] .theme-toggle-btn {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #00f0ff;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
+}
+
+[data-theme="dark"] .theme-toggle-btn:hover {
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.35);
+}
+
+[data-theme="light"] .theme-toggle-btn {
+  background-color: rgba(15, 23, 42, 0.06);
+  border-color: rgba(15, 23, 42, 0.15);
+  color: #0f172a;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .theme-toggle-btn:hover {
+  background-color: rgba(15, 23, 42, 0.1);
+  border-color: #0f172a;
 }
 
 .theme-toggle-icon {
   flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.theme-toggle-btn:hover .theme-toggle-icon {
+  transform: rotate(20deg);
 }
 
 .theme-toggle-label {

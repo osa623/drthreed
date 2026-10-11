@@ -211,13 +211,13 @@ export const InspectorPage: React.FC = () => {
     }
   }, []);
 
-  // Load built-in Mars Research Outpost
+  // Load built-in Sample 3D Model
   const handleLoadSample = useCallback(() => {
-    editorStore.setLoading(true, 'Generating Mars Research Outpost Alpha...', 20);
+    editorStore.setLoading(true, 'Generating Sample 3D Model...', 20);
     setTimeout(() => {
       try {
         const sampleRoot = SampleSceneBuilder.buildMarsOutpostScene();
-        ingestScene(sampleRoot, 'Mars_Outpost_Alpha.glb');
+        ingestScene(sampleRoot, 'Sample_3d_Model.glb');
       } catch (err) {
         editorStore.setLoading(false);
         editorStore.setErrorMessage(`Failed to generate sample environment: ${err}`);
@@ -305,7 +305,7 @@ export const InspectorPage: React.FC = () => {
       lightingManagerRef.current = instances.lightingManager;
       playerControllerRef.current = instances.playerController;
 
-      // Automatically load Mars Outpost sample scene on first load!
+      // Automatically load Sample 3D Model scene on first load!
       handleLoadSample();
     },
     [handleLoadSample]

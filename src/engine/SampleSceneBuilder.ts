@@ -8,7 +8,7 @@ export class SampleSceneBuilder {
    */
   public static buildMarsOutpostScene(): THREE.Group {
     const root = new THREE.Group();
-    root.name = 'Mars_Research_Outpost_Alpha';
+    root.name = 'Sample_3d_Model';
 
     // Materials
     const terrainMaterial = new THREE.MeshStandardMaterial({

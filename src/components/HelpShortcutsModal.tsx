@@ -54,11 +54,11 @@ export const HelpShortcutsModal: React.FC<HelpShortcutsModalProps> = ({ isOpen, 
             </div>
           </div>
 
-          {/* Blender Free-Fly Mode */}
+          {/* Free-Fly Mode */}
           <div className="help-mode-block">
             <div className="help-mode-title" style={{ color: '#d166ff' }}>
               <Sparkles size={15} />
-              <span>Blender Free-Fly Mode (No Gravity)</span>
+              <span>Free-Fly Mode (No Gravity)</span>
             </div>
             <div className="help-shortcut-row">
               <span className="help-key-chip">Click Viewport</span>
