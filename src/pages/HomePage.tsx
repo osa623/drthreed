@@ -275,7 +275,7 @@ export const HomePage: React.FC = () => {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Link to="/inspector" className="reference-header-cta" title="Launch 3D Inspector">
-              <div className="header-avatar-circle">3D</div>
+              <DrThreeDLogo size={32} showWordmark={false} />
               <span className="cta-text-full">Open Inspector</span>
               <span className="cta-text-short">Inspector</span>
               <ArrowUpRight size={14} />
@@ -745,37 +745,7 @@ export const HomePage: React.FC = () => {
               </div>
             </div>
 
-            <div className="reference-about-card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'linear-gradient(135deg, #0f172a, #334155)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00f0ff', fontWeight: 700, fontSize: '16px' }}>
-                  3D
-                </div>
-                <div>
-                  <h3 className="about-card-title" style={{ fontSize: '18px', margin: 0 }}>
-                    {ABOUT_CONTENT.developerName}
-                  </h3>
-                  <div style={{ color: '#0284c7', fontSize: '12px', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
-                    {ABOUT_CONTENT.developerTitle}
-                  </div>
-                </div>
-              </div>
-              <div className="capability-card-divider" />
-              <p className="about-card-text" style={{ fontSize: '13.5px' }}>
-                {ABOUT_CONTENT.developerBio}
-              </p>
-              <div style={{ marginTop: 'auto', paddingTop: '8px' }}>
-                <a
-                  href={ABOUT_CONTENT.githubRepoUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn-pill-accent"
-                  style={{ display: 'inline-flex', padding: '10px 22px', fontSize: '13px' }}
-                >
-                  <span>GitHub Repository</span>
-                  <ExternalLink size={13} />
-                </a>
-              </div>
-            </div>
+
           </div>
         </div>
       </section>
@@ -825,7 +795,9 @@ export const HomePage: React.FC = () => {
           </div>
 
           <div style={{ color: '#64748b', fontSize: '12px' }}>
-            DrThreeD Platform · Built with Three.js & Rapier 3D WASM
+            Meet the Dev : <a href="https://osandahirushaka.tech" target="_blank" rel="noreferrer" style={{ color: '#00f0ff', fontWeight: 600 }}>
+              Osanda Hirushaka
+            </a>  
           </div>
         </div>
       </footer>

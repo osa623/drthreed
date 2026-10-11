@@ -32,7 +32,7 @@ export const SITE_BRAND: SiteBrandConfig = {
   tagline: 'Browser-Based 3D Environment Inspection & Physics Traversal Platform',
   version: '1.0.0',
   releaseTag: 'v1.0 WASM',
-  githubUrl: 'https://github.com',
+  githubUrl: 'https://github.com/osa623',
   docsUrl: '#blender',
 };
 
@@ -41,12 +41,12 @@ export const ABOUT_CONTENT: AboutPlaceholderConfig = {
   projectSubtitle: 'Bridging 3D Modeling Workflows & Browser-Native Exploration',
   projectMission:
     'DrThreeD was created to solve a persistent friction point in 3D development: the necessity of opening massive desktop digital content creation suites just to inspect node structures, test collision bounds, verify scale, or explore an architectural layout in first person. By utilizing Three.js and Rapier 3D WebAssembly, everything runs 100% locally in your browser with zero latency and complete file privacy.',
-  developerName: '[Developer / Project Owner Name]',
-  developerTitle: '[Role / Specialization — e.g. 3D Systems & Graphics Engineer]',
+  developerName: 'Osanda Muthukumarana',
+  developerTitle: '3D Systems & Graphics Engineer | Software Engineer',
   developerBio:
-    '[Placeholder: Add your bio, studio information, research focus, or personal background here. This section is centrally managed in src/config/siteContent.ts for effortless customization.]',
-  contactEmailPlaceholder: '[contact@example.com]',
-  githubRepoUrl: 'https://github.com',
+    ':)',
+  contactEmailPlaceholder: 'osandam23@gmail.com',
+  githubRepoUrl: 'https://github.com/osa623',
 };
 
 export const SHOWCASE_ENVIRONMENTS = [
