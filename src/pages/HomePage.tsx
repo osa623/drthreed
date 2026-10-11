@@ -4,11 +4,9 @@ import * as THREE from 'three';
 import {
   ArrowRight,
   ArrowUpRight,
-  Layers,
   Sparkles,
   Terminal,
   FileCode,
-  ExternalLink,
   Menu,
   X,
 } from 'lucide-react';

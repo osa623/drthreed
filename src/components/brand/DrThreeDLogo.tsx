@@ -1,6 +1,5 @@
 import React from 'react';
 import logoPng from './DrThreeDLogo.png';
-import { Scale } from 'lucide-react';
 
 export interface DrThreeDLogoProps {
   size?: number;
