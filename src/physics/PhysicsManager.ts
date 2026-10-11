@@ -155,17 +155,18 @@ export class PhysicsManager {
 
     // 3. Create Rapier Character Controller
     // Skin offset allows smooth contact resolution without sticking
-    this.characterController = this.world.createCharacterController(0.015);
+    this.characterController = this.world.createCharacterController(0.01);
+    this.characterController.setSlideEnabled(true);
     
     // Configure slope limits: convert degrees to radians
     const maxSlopeRad = (motionSettings.maxSlopeAngle * Math.PI) / 180;
     this.characterController.setMaxSlopeClimbAngle(maxSlopeRad);
     this.characterController.setMinSlopeSlideAngle(maxSlopeRad);
 
-    // Configure autostepping
+    // Configure autostepping with small 5cm minStepWidth to smoothly step over floor edges and curbs
     this.characterController.enableAutostep(
       motionSettings.maxStepHeight,
-      this.capsuleRadius * 0.8,
+      0.05,
       false
     );
 
@@ -267,10 +268,119 @@ export class PhysicsManager {
       this.rapierInstance,
       x,
       z,
+      30.0,
       60.0,
       this.capsuleHalfHeight,
       this.capsuleRadius
     );
+  }
+
+  /**
+   * Intelligently discovers the best walkable spawn point for any imported environment
+   */
+  public calculateSmartSpawn(
+    sceneBounds: THREE.Box3,
+    nodes: Map<string, AnalyzedNode>
+  ): { safePosition: [number, number, number]; isValidated: boolean } {
+    if (!this.world || !this.rapierInstance) {
+      return { safePosition: [0, 1.5, 0], isValidated: false };
+    }
+
+    const sceneCenter = sceneBounds.getCenter(new THREE.Vector3());
+    const sceneSize = sceneBounds.getSize(new THREE.Vector3());
+
+    // 1. Identify candidate (X, Z) bases
+    const candidateBases: Array<[number, number]> = [];
+
+    // Prioritize explicitly designated ground/floor surfaces
+    let bestGroundNode: AnalyzedNode | null = null;
+    let widestFloorArea = 0;
+
+    Array.from(nodes.values()).forEach((node: AnalyzedNode) => {
+      if (node.hasMeshes && node.colliderConfig.isGround) {
+        if (node.footprintArea > widestFloorArea) {
+          widestFloorArea = node.footprintArea;
+          bestGroundNode = node;
+        }
+      }
+    });
+
+    if (bestGroundNode) {
+      const bg = bestGroundNode as AnalyzedNode;
+      candidateBases.push([bg.center[0], bg.center[2]]);
+    }
+
+    // Also test scene bounding box center
+    candidateBases.push([sceneCenter.x, sceneCenter.z]);
+
+    // Search offsets around candidate centers to find clear standing positions
+    const searchGrid = [
+      [0, 0],
+      [0, 1.2],
+      [0, -1.2],
+      [1.2, 0],
+      [-1.2, 0],
+      [2.0, 2.0],
+      [-2.0, -2.0],
+    ];
+
+    // Compute interior search elevation:
+    // Starting slightly above the bottom/floor prevents hitting ceilings/roofs in garages or indoor environments
+    const interiorStartY = sceneBounds.min.y + Math.min(2.5, Math.max(1.0, sceneSize.y * 0.35));
+    const maxRayDist = Math.max(8.0, sceneSize.y + 4.0);
+
+    for (const [baseX, baseZ] of candidateBases) {
+      for (const [dx, dz] of searchGrid) {
+        const testX = parseFloat((baseX + dx).toFixed(2));
+        const testZ = parseFloat((baseZ + dz).toFixed(2));
+
+        // Try from interior height first (crucial for buildings/rooms with roofs!)
+        const interiorResult = GroundDetector.findSafeSpawnHeight(
+          this.world,
+          this.rapierInstance,
+          testX,
+          testZ,
+          interiorStartY,
+          maxRayDist,
+          this.capsuleHalfHeight,
+          this.capsuleRadius
+        );
+
+        if (interiorResult.found && interiorResult.slopeDegrees <= 45) {
+          return {
+            safePosition: [testX, parseFloat(interiorResult.safeY.toFixed(2)), testZ],
+            isValidated: true,
+          };
+        }
+
+        // Secondary try: from above scene bounds (for open outdoor terrain)
+        const outdoorStartY = sceneBounds.max.y + 2.0;
+        const outdoorResult = GroundDetector.findSafeSpawnHeight(
+          this.world,
+          this.rapierInstance,
+          testX,
+          testZ,
+          outdoorStartY,
+          sceneSize.y + 10.0,
+          this.capsuleHalfHeight,
+          this.capsuleRadius
+        );
+
+        if (outdoorResult.found && outdoorResult.slopeDegrees <= 45) {
+          return {
+            safePosition: [testX, parseFloat(outdoorResult.safeY.toFixed(2)), testZ],
+            isValidated: true,
+          };
+        }
+      }
+    }
+
+    // Fallback: spawn at horizontal center, elevated slightly above bounds bottom
+    const fallbackY = sceneBounds.min.y + this.capsuleHalfHeight + this.capsuleRadius + 0.3;
+    return {
+      safePosition: [parseFloat(sceneCenter.x.toFixed(2)), parseFloat(fallbackY.toFixed(2)), parseFloat(sceneCenter.z.toFixed(2))],
+      isValidated: false,
+    };
   }
 
   public destroyPlayer(): void {

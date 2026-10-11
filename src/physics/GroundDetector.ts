@@ -81,23 +81,24 @@ export class GroundDetector {
   }
 
   /**
-   * Safe spawn height finder: Casts down from a high altitude to find the topmost ground surface
+   * Safe spawn height finder: Casts down to locate walkable floor surface
    */
   public static findSafeSpawnHeight(
     world: RAPIER.World,
     rapier: typeof RAPIER,
     x: number,
     z: number,
-    searchCeilingY: number = 50.0,
-    capsuleHalfHeight: number = 0.9,
+    searchStartY: number = 3.0,
+    maxDistance: number = 20.0,
+    capsuleHalfHeight: number = 0.55,
     capsuleRadius: number = 0.35
   ): { safeY: number; found: boolean; slopeDegrees: number } {
-    const origin = new THREE.Vector3(x, searchCeilingY, z);
-    const result = this.raycastGround(world, rapier, origin, 100.0, 50);
+    const origin = new THREE.Vector3(x, searchStartY, z);
+    const result = this.raycastGround(world, rapier, origin, maxDistance, 50);
 
     if (result.hit) {
       // Position capsule so its bottom rests just above the ground surface + small clearance
-      const safeY = result.point.y + capsuleHalfHeight + capsuleRadius + 0.05;
+      const safeY = result.point.y + capsuleHalfHeight + capsuleRadius + 0.08;
       return {
         safeY,
         found: true,
@@ -105,6 +106,6 @@ export class GroundDetector {
       };
     }
 
-    return { safeY: 1.5, found: false, slopeDegrees: 0 };
+    return { safeY: searchStartY, found: false, slopeDegrees: 0 };
   }
 }

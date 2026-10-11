@@ -1,4 +1,5 @@
 import React from 'react';
+import * as THREE from 'three';
 import { Mountain, MapPin, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useEditorStore, editorStore } from '../state/editorStore';
 import type { PhysicsManager } from '../physics/PhysicsManager';
@@ -27,30 +28,42 @@ export const TerrainSettingsPanel: React.FC<TerrainSettingsPanelProps> = ({ phys
     const node = nodes.get(selectedNodeId);
     if (!node) return;
 
-    const [cx, , cz] = node.center;
+    const [cx, cy, cz] = node.center;
     const safeResult = physicsManager.findSafeSpawn(cx, cz);
+    const targetY = safeResult.found ? safeResult.safeY : Math.max(cy + 1.0, node.worldBoundingBox.max[1] + 0.1);
 
     editorStore.setState({
       spawnPoint: {
-        position: [cx, safeResult.safeY, cz],
+        position: [cx, targetY, cz],
         rotationY: 0,
         eyeHeight: 1.65,
         isValidated: safeResult.found,
-        groundHeightFound: safeResult.found ? safeResult.safeY : undefined,
+        groundHeightFound: targetY,
       },
     });
   };
 
   const handleAutoFindSafeSpawn = () => {
-    if (!physicsManager) return;
-    const safeResult = physicsManager.findSafeSpawn(0, 10);
+    if (!physicsManager || nodes.size === 0) return;
+
+    const bounds = new THREE.Box3();
+    nodes.forEach((n) => {
+      bounds.union(
+        new THREE.Box3(
+          new THREE.Vector3(...n.worldBoundingBox.min),
+          new THREE.Vector3(...n.worldBoundingBox.max)
+        )
+      );
+    });
+
+    const smart = physicsManager.calculateSmartSpawn(bounds, nodes);
     editorStore.setState({
       spawnPoint: {
-        position: [0, safeResult.safeY, 10],
+        position: smart.safePosition,
         rotationY: 0,
         eyeHeight: 1.65,
-        isValidated: safeResult.found,
-        groundHeightFound: safeResult.found ? safeResult.safeY : undefined,
+        isValidated: smart.isValidated,
+        groundHeightFound: smart.isValidated ? smart.safePosition[1] : undefined,
       },
     });
   };

@@ -82,14 +82,18 @@ export const InspectorPage: React.FC = () => {
       editorStore.setLoading(true, 'Constructing Rapier 3D Colliders...', 80);
       physicsManagerRef.current.rebuildColliders(rootObj, analysis.nodes, false);
 
-      // 5. Calculate safe spawn point
-      const safeSpawn = physicsManagerRef.current.findSafeSpawn(0, 10);
+      // 5. Calculate safe spawn point dynamically tailored to this specific environment
+      const smartSpawn = physicsManagerRef.current.calculateSmartSpawn(
+        analysis.sceneBounds,
+        analysis.nodes
+      );
+
       editorStore.setState({
         spawnPoint: {
-          position: [0, safeSpawn.safeY, 10],
+          position: smartSpawn.safePosition,
           rotationY: 0,
           eyeHeight: 1.65,
-          isValidated: safeSpawn.found,
+          isValidated: smartSpawn.isValidated,
         },
       });
 

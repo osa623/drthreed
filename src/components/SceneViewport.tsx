@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useEditorStore, editorStore } from '../state/editorStore';
 import { SceneManager } from '../engine/SceneManager';
 import { RenderManager } from '../engine/RenderManager';
@@ -19,6 +19,7 @@ interface SceneViewportProps {
 export const SceneViewport: React.FC<SceneViewportProps> = ({ onEngineReady }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isPointerLocked, setIsPointerLocked] = useState(false);
 
   const sceneManagerRef = useRef<SceneManager | null>(null);
   const renderManagerRef = useRef<RenderManager | null>(null);
@@ -75,9 +76,7 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({ onEngineReady }) =
       // Init Rapier 3D WASM
       physicsMgr.init().then(() => {
         playerCtrl.init(container, (isLocked) => {
-          if (!isLocked && editorStore.getState().viewMode === 'first_person') {
-            // pointer lock was released by pressing Esc
-          }
+          setIsPointerLocked(isLocked);
         });
 
         if (onEngineReady) {
@@ -217,13 +216,34 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({ onEngineReady }) =
       {/* First-Person HUD Overlay */}
       {viewMode === 'first_person' && (
         <div className="play-hud-overlay">
-          <div className="hud-banner">
-            <span style={{ color: 'var(--accent-cyan)', fontWeight: 600 }}>FIRST-PERSON EXPLORATION</span>
-            <span>WASD: Move</span>
-            <span>Shift: Run</span>
-            <span>Space: Jump</span>
-            <span>Esc: Exit Mode</span>
-          </div>
+          {!isPointerLocked ? (
+            <div
+              className="hud-banner"
+              style={{
+                background: 'rgba(0, 240, 255, 0.25)',
+                border: '1px solid var(--accent-cyan)',
+                cursor: 'pointer',
+                boxShadow: '0 0 15px rgba(0, 240, 255, 0.3)',
+              }}
+              onClick={() => {
+                if (containerRef.current && playerControllerRef.current) {
+                  playerControllerRef.current.requestPointerLock(containerRef.current);
+                }
+              }}
+            >
+              <span style={{ color: '#fff', fontWeight: 700 }}>
+                👉 CLICK VIEWPORT TO CAPTURE MOUSE & LOOK AROUND (WASD TO WALK)
+              </span>
+            </div>
+          ) : (
+            <div className="hud-banner">
+              <span style={{ color: 'var(--accent-cyan)', fontWeight: 600 }}>EXPLORATION ACTIVE</span>
+              <span>WASD: Move</span>
+              <span>Shift: Sprint</span>
+              <span>Space: Jump</span>
+              <span>Esc: Release Mouse / Exit</span>
+            </div>
+          )}
 
           <div className="hud-crosshair" />
 

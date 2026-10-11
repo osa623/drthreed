@@ -132,6 +132,13 @@ export class SceneAnalyzer {
         triangleCount
       );
 
+      // If this node is a Group / container with multiple children,
+      // do NOT generate a solid bounding box that traps the interior of the scene/building!
+      if (childrenIds.length > 0) {
+        defaultCollider.enabled = false;
+        defaultCollider.mode = 'none';
+      }
+
       const analyzed: AnalyzedNode = {
         id: nodeId,
         uuid: obj.uuid,
@@ -171,6 +178,36 @@ export class SceneAnalyzer {
 
     const rootId = processNode(root, null);
 
+    // Fallback: If no node in the scene was classified as ground,
+    // find the lowest wide mesh in the scene and designate it as walkable ground
+    let hasGroundNode = false;
+    nodes.forEach((n) => {
+      if (n.colliderConfig.isGround) hasGroundNode = true;
+    });
+
+    if (!hasGroundNode && nodes.size > 0) {
+      let lowestMeshNode: AnalyzedNode | null = null;
+      let lowestY = Infinity;
+
+      nodes.forEach((n) => {
+        if (n.hasMeshes && n.childrenIds.length === 0) {
+          const minY = n.worldBoundingBox.min[1];
+          if (minY < lowestY) {
+            lowestY = minY;
+            lowestMeshNode = n;
+          }
+        }
+      });
+
+      if (lowestMeshNode) {
+        (lowestMeshNode as AnalyzedNode).colliderConfig.isGround = true;
+        (lowestMeshNode as AnalyzedNode).colliderConfig.enabled = true;
+        (lowestMeshNode as AnalyzedNode).colliderConfig.mode = 'trimesh';
+        (lowestMeshNode as AnalyzedNode).category = 'floor_ground';
+        (lowestMeshNode as AnalyzedNode).categoryReason = 'Automatically designated as baseline walkable floor.';
+      }
+    }
+
     return {
       nodes,
       rootId,
@@ -187,7 +224,7 @@ export class SceneAnalyzer {
   private static classifyNode(
     obj: THREE.Object3D,
     dimensions: [number, number, number],
-    center: [number, number, number],
+    _center: [number, number, number],
     meshCount: number,
     triangleCount: number
   ): {
@@ -234,12 +271,19 @@ export class SceneAnalyzer {
       rawName.includes('pavement') ||
       rawName.includes('slab') ||
       rawName.includes('platform') ||
-      (aspectFlatness < 0.08 && horizontalExtent > 4.0 && center[1] < 1.0)
+      rawName.includes('concrete') ||
+      rawName.includes('plane') ||
+      rawName.includes('ground') ||
+      rawName.includes('road') ||
+      rawName.includes('driveway') ||
+      rawName.includes('asphalt') ||
+      rawName.includes('tile') ||
+      (aspectFlatness < 0.12 && horizontalExtent > 2.0)
     ) {
       return {
         category: 'floor_ground',
         confidence: 0.9,
-        reason: rawName.includes('floor')
+        reason: rawName.includes('floor') || rawName.includes('ground') || rawName.includes('concrete')
           ? `Named "${obj.name}" matching floor taxonomy.`
           : `Flat geometry aspect ratio (${aspectFlatness.toFixed(2)}) with wide span (${horizontalExtent.toFixed(1)}m).`,
         defaultCollider: {
@@ -253,7 +297,7 @@ export class SceneAnalyzer {
       };
     }
 
-    // Rule 3: Building / Habitat / Structure
+    // Rule 3: Building / Habitat / Structure / Garage / Room
     if (
       rawName.includes('building') ||
       rawName.includes('hab') ||
@@ -264,6 +308,12 @@ export class SceneAnalyzer {
       rawName.includes('module') ||
       rawName.includes('structure') ||
       rawName.includes('hangar') ||
+      rawName.includes('garage') ||
+      rawName.includes('house') ||
+      rawName.includes('room') ||
+      rawName.includes('shed') ||
+      rawName.includes('warehouse') ||
+      rawName.includes('interior') ||
       rawName.includes('lab')
     ) {
       return {
@@ -288,8 +338,8 @@ export class SceneAnalyzer {
         reason: `Named "${obj.name}" matching vertical barrier taxonomy.`,
         defaultCollider: {
           enabled: true,
-          mode: 'box_exact',
-          margin: 0.05,
+          mode: horizontalExtent > 3.0 ? 'trimesh' : 'box_exact',
+          margin: 0,
           isGround: false,
           isWalkableSlope: false,
         },
@@ -421,7 +471,7 @@ export class SceneAnalyzer {
       reason: `No definitive naming or geometry heuristics matched. Classified as general scene node.`,
       defaultCollider: {
         enabled: meshCount > 0,
-        mode: meshCount > 0 ? 'box_exact' : 'none',
+        mode: meshCount > 0 ? (horizontalExtent > 4.0 ? 'trimesh' : 'box_exact') : 'none',
         margin: 0,
         isGround: false,
         isWalkableSlope: false,

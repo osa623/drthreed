@@ -103,8 +103,8 @@ export class PlayerController {
         this.verticalVelocity = settings.jumpForce;
         this.isGrounded = false;
       } else {
-        // Slight negative downward force when grounded to track descending slopes cleanly
-        this.verticalVelocity = -2.0;
+        // When grounded, zero downward force; Rapier's snap-to-ground handles smooth slope adherence
+        this.verticalVelocity = 0;
       }
     } else {
       // Apply gravity in freefall
