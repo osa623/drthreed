@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { validateGLBFile } from '../utils/validation';
 
 export interface ImportProgress {
@@ -10,9 +12,19 @@ export interface ImportProgress {
 
 export class GLBImporter {
   private loader: GLTFLoader;
+  private static dracoLoader: DRACOLoader | null = null;
 
   constructor() {
     this.loader = new GLTFLoader();
+
+    if (!GLBImporter.dracoLoader) {
+      GLBImporter.dracoLoader = new DRACOLoader();
+      const basePath = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/draco/gltf/';
+      GLBImporter.dracoLoader.setDecoderPath(basePath);
+    }
+
+    this.loader.setDRACOLoader(GLBImporter.dracoLoader);
+    this.loader.setMeshoptDecoder(MeshoptDecoder);
   }
 
   /**
