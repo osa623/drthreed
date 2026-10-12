@@ -273,51 +273,7 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({ onEngineReady, onL
   return (
     <div className="viewport-container" ref={containerRef}>
       {/* Floating Viewport Toolbar (Orbit Mode) */}
-      {viewMode === 'orbit' && (
-        <div className="floating-viewport-toolbar">
-          {selectedNodeId && (
-            <button
-              type="button"
-              className="viewport-toolbar-btn"
-              onClick={handleFocusSelected}
-              title="Focus camera on selected object"
-            >
-              <Target size={13} color="var(--accent-cyan)" />
-              <span>Focus Selected</span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            className={`viewport-toolbar-btn ${showPhysicsDebug ? 'active' : ''}`}
-            onClick={handleToggleWireframe}
-            title="Toggle Rapier collider wireframes"
-          >
-            <Layers size={13} />
-            <span>Wireframe</span>
-          </button>
-
-          <button
-            type="button"
-            className="viewport-toolbar-btn"
-            onClick={() => editorStore.setViewMode('fly')}
-            title="Switch to Free-Fly mode"
-          >
-            <Sparkles size={13} color="#d166ff" />
-            <span>Fly Mode</span>
-          </button>
-
-          <button
-            type="button"
-            className="viewport-toolbar-btn"
-            onClick={() => editorStore.setViewMode('first_person')}
-            title="Switch to First-Person mode"
-          >
-            <Footprints size={13} color="var(--accent-emerald)" />
-            <span>Explore Mode</span>
-          </button>
-        </div>
-      )}
+   
 
       {/* Initial Empty State Banner if no nodes loaded */}
       {nodes.size === 0 && !isLoading && (
