@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Target, Layers, Sparkles, UploadCloud, Footprints } from 'lucide-react';
+import { Sparkles, UploadCloud } from 'lucide-react';
 import { useEditorStore, editorStore } from '../state/editorStore';
 import { useTheme, themeStore } from '../state/themeStore';
 import { SceneManager } from '../engine/SceneManager';
@@ -260,15 +260,7 @@ export const SceneViewport: React.FC<SceneViewportProps> = ({ onEngineReady, onL
     });
   }, [nodes]);
 
-  const handleFocusSelected = () => {
-    if (selectedNodeId && sceneManagerRef.current) {
-      sceneManagerRef.current.focusNode(selectedNodeId);
-    }
-  };
 
-  const handleToggleWireframe = () => {
-    editorStore.setPhysicsDebug(!showPhysicsDebug);
-  };
 
   return (
     <div className="viewport-container" ref={containerRef}>
